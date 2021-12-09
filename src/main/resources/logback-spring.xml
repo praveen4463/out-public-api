@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- !!! We may move to spring cloud gcp logging once its version 1.2.x is out in mavencentral. -->
+<configuration>
+  <!-- Spring uses commons logging, which is an adapter to a plugged in logging implementation. By
+       using Logback, we're plugging in Logback to be used by spring internal and our app. -->
+  <springProfile name="production">
+    <!-- Note that to run stackdriver logging, agent should be installed on server. -->
+    <appender name="STACKDRIVER" class="com.google.cloud.logging.logback.LoggingAppender">
+      <log>app-zl-api.log</log>
+      <!-- If not given, logs appear under k8s container logs under type "container" -->
+      <resourceType>global</resourceType>
+      <flushLevel>INFO</flushLevel>
+      <loggingEventEnhancer>com.zylitics.api.logging.DefaultEnhancer</loggingEventEnhancer>
+    </appender>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <logger name="io.grpc.netty" level="ERROR" />
+    <logger name="io.netty" level="ERROR" />
+    <logger name="org.asynchttpclient.netty" level="ERROR" />
+    <root level="${rootLogLevel:-INFO}">
+      <appender-ref ref="STACKDRIVER" />
+    </root>
+  </springProfile>
+  <!-- ======================================================================================= -->
+  <!-- ======================================================================================= -->
+  <springProfile name="!production">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+    <logger name="io.grpc.netty" level="ERROR" />
+    <logger name="io.netty" level="ERROR" />
+    <logger name="org.asynchttpclient.netty" level="ERROR" />
+    <root level="${rootLogLevel:-INFO}">
+      <appender-ref ref="CONSOLE" />
+    </root>
+  </springProfile>
+
+</configuration>

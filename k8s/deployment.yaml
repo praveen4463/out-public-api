@@ -1,0 +1,130 @@
+# https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deployment-v1-apps
+# !! Take care before an update is sent, read here how updates work
+#    https://kubernetes.io/docs/tasks/manage-kubernetes-objects/declarative-config/
+# Recommended labels: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zl-api-deployment
+  labels: &LABELS # will be assigned to deployment object
+    app.kubernetes.io/name: &APP zl-api
+    app.kubernetes.io/version: &VERSION 0.0.1
+    environment: &ENVIRONMENT production
+# https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    # Only pods matching this set of labels will be selected for this deployment. This helps during
+    # update. If no pods are found matching, they're created, otherwise they're deleted and new
+    # created.
+    matchLabels:
+      app.kubernetes.io/name: *APP
+  template:
+    metadata:
+      # will be assigned to pods
+      labels: *LABELS
+    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#podspec-v1-core
+    spec:
+      # each pod contains two containers, the API and ESP proxy
+      containers:
+        - name: esp
+          image: gcr.io/endpoints-release/endpoints-runtime:1
+          imagePullPolicy: Always
+          # TODO: test this service endpoint by calling service within cluster.
+          # TODO: if cors_allow_origin doesn't work with multiple origins, use --cors_allow_origin_regex
+          args: [
+              "--http_port=4000",
+              "--backend=127.0.0.1:8080",
+              "--service=api.zylitics.io",
+              "--rollout_strategy=managed",
+          ]
+          ports:
+            - containerPort: 4000
+        - name: *APP
+          image: us.gcr.io/zl-infra-main/zl-api:0.0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: &CONTAINER_PORT container-port
+              containerPort: 8080
+          # TODO: test whether probes are working correctly within nginx-ingress, also see if we
+          #  require targeting
+          #  service rather than pods from ingress
+          #  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#service-upstream
+          # Probes: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+          livenessProbe:
+            httpGet:
+              path: &HEALTH /beta/actuator/health
+              port: *CONTAINER_PORT
+            periodSeconds: 5
+            failureThreshold: 1
+          # currently we're ok with the default diskspace implementation of health endpoint as it
+          # works only after the app is started, we can put more precise logic later if required.
+          startupProbe:
+            httpGet:
+              path: *HEALTH
+              port: *CONTAINER_PORT
+            periodSeconds: 3
+            failureThreshold: 10
+          # For now we don't need a readiness probe, understand when we may require it
+          # resources: TODO: mention this once you know how much resources the app usually consume
+          #   https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          #   https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#resourcerequirements-v1-core
+---
+# https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#service-v1-core
+apiVersion: v1
+kind: Service
+metadata:
+  name: zl-api-service
+spec:
+  clusterIP: 10.29.4.6 # this can be setup in cloud dns internal
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4000 # Target esp container that transfers traffic to application.
+      name: http
+  selector:
+    app.kubernetes.io/name: zl-api
+---
+# This is an ingress resource, we can create a separate ingress resources that target the same
+# ingress controller instance. The annotations you provide here applies to the set of rules
+# mentioned for this ingress resource.
+# https://kubernetes.io/docs/concepts/services-networking/ingress/#the-ingress-resource
+# Multiple ingress resources makes sense when you want different annotations for different
+# resources, for example a web socket resource might require a higher timeout values than a normal
+# http resource. We've kept certificate separate from ingress resources, cert-manager won't look
+# into our ingress resources to create a certificate, thus we can mention several ingress resources.
+apiVersion: networking.k8s.io/v1 # version of kubernetes ingress controller
+kind: Ingress
+metadata:
+  name: api-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # following timeouts signifies, when nginx at node sends request to a pod, it expects a response
+    # within 'read' timeout, also it expects to send another request to same pod within 'send'
+    # timeout during a connection. if it won't hear from server or won't hear from client,
+    # connection will be closed.
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "21600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "21600"
+    # https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#server-side-https-enforcement-through-redirect
+    # https://github.com/kubernetes/ingress-nginx/issues/1567
+    # !! don't use in production, allows http access.
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1beta1-extensions
+  tls:
+    - secretName: zl-k8s-univ-cert
+  rules:
+    # we can add a default backend later on, that serve requests that don't match any path.
+    - host: api.zylitics.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: zl-api-service
+                port:
+                  number: 80
+---

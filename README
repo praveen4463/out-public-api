@@ -1,0 +1,14 @@
+# https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin#system-properties
+- build docker image via jib:
+mvn -DskipTest=true compile jib:build
+or
+mvn -X -Djib.serialize=true -Djib.console=plain compile jib:build
+
+Process:
+MAKE SURE TO COMPLETED FOLLOWING STEPS BEFORE TAGGING IN GIT
+1. Make db updates if there are any
+2. Build and push new docker image via jib
+3. Apply new k8s deployments
+4. If this is a change in any api endpoint, don't forget to make the changes in openapi file.
+5. Deploy endpoints config: gcloud endpoints services deploy openapi.yaml --project=zl-infra-main
+See https://cloud.google.com/endpoints/docs/openapi/get-started-kubernetes#configuring_the_service_name_and_starting_the_service

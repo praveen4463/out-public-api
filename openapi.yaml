@@ -1,0 +1,109 @@
+# In some places we've taken invalid types as endpoints rejected those types. Per below, ESP won't
+# stop a request based on parameters and ignores them so we're good with some invalid types.
+# https://cloud.google.com/endpoints/docs/openapi/openapi-limitations
+# !!! If you see error like 'host domain is not verified' but https://cloud.google.com/endpoints/docs/openapi/verify-domain-name
+# shows you own the domain, just add gcloud account's email in the owner's list of domain.
+# Before running, make sure to switch gcloud's project so that api is created on correct project.
+swagger: "2.0"
+info:
+  description: Zylitics api
+  title: Zylitics api
+  # This version no. is just to showing in the console and has no affect on functionality, although it should be
+  # updated whenever production version is updated.
+  version: 0.0.1
+host: api.zylitics.io
+x-google-endpoints:
+  - name: api.zylitics.io
+basePath: /beta
+schemes:
+  - http # TLS is terminated before hitting ESP, so only http.
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /actuator/health: # adding this here wasn't required if we just wanted it to be accessed from
+  # cluster's health check as it accesses the container directly without going to esp on container's
+  # port.
+    get:
+      operationId: health
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        default:
+          description: Unexpected exception
+  /projects/{projectId}/builds:
+    post:
+      description: New build
+      operationId: newBuild
+      parameters:
+        - in: body
+          name: buildRunConfig
+          required: true
+          schema:
+            $ref: '#/definitions/BuildRunConfig'
+        - $ref: '#/parameters/projectId'
+      responses:
+        200:
+          description: OK
+        default:
+          description: Unexpected exception
+          schema:
+            $ref: '#/definitions/ApiError'
+security: []
+parameters:
+  projectId:
+    in: path
+    name: projectId
+    type: integer
+    required: true
+definitions:
+  RunnerPreferences:
+    type: object
+    properties:
+      abortOnFailure:
+        type: boolean
+      aetKeepSingleWindow:
+        type: boolean
+      aetUpdateUrlBlank:
+        type: boolean
+      aetResetTimeouts:
+        type: boolean
+      aetDeleteAllCookies:
+        type: boolean
+  BuildRunConfig:
+    type: object
+    required:
+      - buildCapabilityId
+      - displayResolution
+      - timezone
+      - versionIds
+    properties:
+      buildCapabilityId:
+        type: integer
+      displayResolution:
+        type: string
+      timezone:
+        type: string
+      selectedBuildVarIdPerKey:
+        type: object
+        additionalProperties:
+          type: integer
+      runnerPreferences:
+        $ref: '#/definitions/RunnerPreferences'
+      buildSourceType:
+        type: string
+        enum: [IDE, CI, NOT_IDE]
+      versionIds:
+        type: array
+        items:
+          type: integer
+  ApiError:
+    type: object
+    required:
+      - message
+    properties:
+      message:
+        type: string

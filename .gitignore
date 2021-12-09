@@ -1,0 +1,7 @@
+target/
+*settings.xml
+*.iml
+*.idea
+*.jar
+
+.DS_Store

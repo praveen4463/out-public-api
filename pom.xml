@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.zylitics</groupId>
+  <artifactId>zl-api</artifactId>
+  <!-- Note: !!! This version is used in these places, kubernetes deployment files, image names in deployment files,
+        openapi specification. Once updated, change all those places too. !!! -->
+  <version>0.0.1</version>
+  <name>zl-api</name>
+  <url>http://maven.apache.org</url>
+  <properties>
+    <google-cloud-kms.version>1.41.1</google-cloud-kms.version>
+    <google-cloud-storage.version>1.113.14</google-cloud-storage.version>
+    <jib-maven-plugin.version>3.1.4</jib-maven-plugin.version>
+    <stackdriver-logback.version>0.120.4-alpha</stackdriver-logback.version>
+
+    <projectId>zl-infra-main</projectId>
+    <skipTest>false</skipTest>
+  </properties>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.4.0</version>
+  </parent>
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-logging-logback</artifactId>
+      <version>${stackdriver-logback.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>${google-cloud-storage.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-kms</artifactId>
+      <version>${google-cloud-kms.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>${jib-maven-plugin.version}</version>
+        <configuration>
+          <from>
+            <!-- TODO: this should be a debian package and therefore we don't need another image
+                  to ssh into it. Find it out. -->
+            <image>adoptopenjdk:8-jre</image>
+          </from>
+          <to>
+            <image>us.gcr.io/${projectId}/zl-front:${project.version}</image> <!-- for now just push in US region -->
+            <credHelper>gcloud</credHelper>
+            <tags>
+              <tag>latest</tag>
+            </tags>
+          </to>
+          <container>
+            <jvmFlags>
+              <jvmFlag>-Xms512m</jvmFlag>
+              <jvmFlag>-noverify</jvmFlag>
+              <jvmFlag>-XX:+UnlockExperimentalVMOptions</jvmFlag>
+              <jvmFlag>-XX:+UseCGroupMemoryLimitForHeap</jvmFlag>
+              <jvmFlag>-Dspring.profiles.active=production</jvmFlag>
+            </jvmFlags>
+            <mainClass>com.zylitics.front.Launcher</mainClass>
+            <ports>
+              <port>8080</port>
+            </ports>
+            <labels>
+              <key1>base-adoptopenjdk-latest-jre-8</key1>
+            </labels>
+          </container>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <skipTests>${skipTest}</skipTests>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,34 @@
+---
+api-core:
+  project-id: zl-infra-main
+  kms-project-id: zl-win-nodes
+  cloud-kms:
+    key-ring: zl-apps-auth-secret
+    key: default-prod
+    key-bucket: zl-secrets
+  data-source:
+    db-name: zbtp
+    user-name: zbtp
+    user-secret-cloud-file: zbtp-auth.encrypt
+    # the private IP of instance, such as 10.11.12.9. CloudSql keeps the default 5432 port thus,
+    # no need to mention that.
+    private-host-cloud-file: zl-pgdb-private-host.encrypt
+    # small idle connections because this app works for a single session only and mostly just one
+    # thread will seek synchronous access to pgdb. see
+    # https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
+    min-idle-conn-pool: 2
+  services:
+    wzgp-endpoint: http://wzgp.api.internal.zylitics.io
+    wzgp-version: beta
+    wzgp-auth-user: prod-test
+    wzgp-auth-secret-cloud-file: zl-wzgp-prod-test-auth.encrypt
+    vm-machine-type: e2-standard-4
+    vm-zones:
+      - us-central1-c
+      - us-west1-b
+    btbr-version: beta
+    btbr-port: 8080
+    btbr-auth-user: root
+    btbr-auth-secret-cloud-file: btbr-api-key.encrypted
+    local-vm-env-var: VM_LOCAL
+---
