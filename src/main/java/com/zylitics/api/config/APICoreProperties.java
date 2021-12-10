@@ -61,6 +61,11 @@ public class APICoreProperties {
   public CloudKms getCloudKms() { return cloudKms; }
   
   @Valid
+  private final Storage storage = new Storage();
+  
+  public Storage getStorage() {return storage;}
+  
+  @Valid
   private final Services services = new Services();
   
   public Services getServices() { return services; }
@@ -171,6 +176,22 @@ public class APICoreProperties {
     public void setKeyBucket(String keyBucket) {
       if (this.keyBucket == null) {
         this.keyBucket = keyBucket;
+      }
+    }
+  }
+  
+  public static class Storage {
+    
+    @NotBlank
+    private String shotBucketUsc;
+  
+    public String getShotBucketUsc() {
+      return shotBucketUsc;
+    }
+  
+    public void setShotBucketUsc(String shotBucketUsc) {
+      if (this.shotBucketUsc == null) {
+        this.shotBucketUsc = shotBucketUsc;
       }
     }
   }

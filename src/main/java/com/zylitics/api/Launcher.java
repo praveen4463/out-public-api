@@ -142,7 +142,7 @@ public class Launcher {
     String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
         + ":" + secret).getBytes());
     HttpClient httpClient = HttpClient.create()
-        .responseTimeout(Duration.ofMinutes(2));
+        .responseTimeout(Duration.ofMinutes(300));
     WebClient webClient = webClientBuilder
         .clientConnector(new ReactorClientHttpConnector(httpClient))
         .defaultHeader("Authorization", btbrUserAuthHeader)

@@ -1,5 +1,6 @@
 package com.zylitics.api.model;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.Min;
@@ -14,22 +15,63 @@ public class BuildRunConfig {
   
   private String buildName;
   
-  private boolean waitForCompletion;
+  private Boolean waitForCompletion;
   
   private BuildCapability buildCapability;
   
-  private String displayResolution;
-  
-  private String timezone;
-  
-  private int retryFailedTestsUpto;
-  
-  private Map<String, String> buildVars;
+  private BuildConfig buildConfig;
   
   @NotNull
   private List<Object> files;
   
-  private static class BuildCapability {
+  public static class BuildConfig {
+    
+    private String displayResolution;
+  
+    private String timezone;
+  
+    private int retryFailedTestsUpto;
+  
+    private Map<String, String> buildVars;
+  
+    public String getDisplayResolution() {
+      return displayResolution;
+    }
+  
+    public BuildConfig setDisplayResolution(String displayResolution) {
+      this.displayResolution = displayResolution;
+      return this;
+    }
+  
+    public String getTimezone() {
+      return timezone;
+    }
+  
+    public BuildConfig setTimezone(String timezone) {
+      this.timezone = timezone;
+      return this;
+    }
+  
+    public int getRetryFailedTestsUpto() {
+      return retryFailedTestsUpto;
+    }
+  
+    public BuildConfig setRetryFailedTestsUpto(int retryFailedTestsUpto) {
+      this.retryFailedTestsUpto = retryFailedTestsUpto;
+      return this;
+    }
+  
+    public Map<String, String> getBuildVars() {
+      return buildVars;
+    }
+  
+    public BuildConfig setBuildVars(Map<String, String> buildVars) {
+      this.buildVars = buildVars;
+      return this;
+    }
+  }
+  
+  public static class BuildCapability {
     
     private String os;
     
@@ -74,12 +116,21 @@ public class BuildRunConfig {
     return this;
   }
   
-  public boolean isWaitForCompletion() {
+  public Boolean getWaitForCompletion() {
     return waitForCompletion;
   }
   
-  public BuildRunConfig setWaitForCompletion(boolean waitForCompletion) {
+  public BuildRunConfig setWaitForCompletion(Boolean waitForCompletion) {
     this.waitForCompletion = waitForCompletion;
+    return this;
+  }
+  
+  public BuildConfig getBuildConfig() {
+    return buildConfig;
+  }
+  
+  public BuildRunConfig setBuildConfig(BuildConfig buildConfig) {
+    this.buildConfig = buildConfig;
     return this;
   }
   
@@ -89,42 +140,6 @@ public class BuildRunConfig {
   
   public BuildRunConfig setBuildCapability(BuildCapability buildCapability) {
     this.buildCapability = buildCapability;
-    return this;
-  }
-  
-  public String getDisplayResolution() {
-    return displayResolution;
-  }
-  
-  public BuildRunConfig setDisplayResolution(String displayResolution) {
-    this.displayResolution = displayResolution;
-    return this;
-  }
-  
-  public String getTimezone() {
-    return timezone;
-  }
-  
-  public BuildRunConfig setTimezone(String timezone) {
-    this.timezone = timezone;
-    return this;
-  }
-  
-  public int getRetryFailedTestsUpto() {
-    return retryFailedTestsUpto;
-  }
-  
-  public BuildRunConfig setRetryFailedTestsUpto(int retryFailedTestsUpto) {
-    this.retryFailedTestsUpto = retryFailedTestsUpto;
-    return this;
-  }
-  
-  public Map<String, String> getBuildVars() {
-    return buildVars;
-  }
-  
-  public BuildRunConfig setBuildVars(Map<String, String> buildVars) {
-    this.buildVars = buildVars;
     return this;
   }
   

@@ -3,9 +3,7 @@ package com.zylitics.api.services;
 import com.zylitics.api.controllers.RunnerService;
 import com.zylitics.api.config.APICoreProperties;
 import com.zylitics.api.util.UrlChecker;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.concurrent.TimeUnit;
@@ -44,22 +42,6 @@ public class ProductionRunnerService implements RunnerService {
       throw new RuntimeException("Unexpectedly got empty response");
     }
     return response.getSessionId();
-  }
-  
-  @Override
-  public boolean stopBuild(String runnerIP, int buildId) {
-    APICoreProperties.Services servicesProps = apiCoreProperties.getServices();
-    String baseUrl = buildBaseUrl(runnerIP, servicesProps);
-    String stopBuildEndpoint = "/builds/{buildId}";
-    // let exception throw when api returns error, we don't need to send that error to user.
-    ResponseEntity<Void> response = webClient.delete()
-        .uri(baseUrl + stopBuildEndpoint, buildId)
-        .retrieve()
-        .toBodilessEntity().block();
-    if (response == null) {
-      throw new RuntimeException("Unexpectedly got empty response");
-    }
-    return response.getStatusCode() == HttpStatus.OK;
   }
   
   private String buildBaseUrl(String runnerIP, APICoreProperties.Services servicesProps) {

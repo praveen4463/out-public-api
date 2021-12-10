@@ -31,4 +31,6 @@ api-core:
     btbr-auth-user: root
     btbr-auth-secret-cloud-file: btbr-api-key.encrypted
     local-vm-env-var: VM_LOCAL
+  storage:
+    shot-bucket-usc: zl-session-assets-usc
 ---
