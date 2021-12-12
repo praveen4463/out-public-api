@@ -3,7 +3,9 @@ package com.zylitics.api.dao;
 import com.zylitics.api.provider.GlobalVarProvider;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class DaoGlobalVarProvider extends AbstractDaoProvider implements GlobalVarProvider {
   
   DaoGlobalVarProvider(NamedParameterJdbcTemplate jdbc) {

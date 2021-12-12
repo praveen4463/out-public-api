@@ -7,20 +7,22 @@ import com.zylitics.api.util.DateTimeUtil;
 import com.zylitics.api.util.Randoms;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Repository
 public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvider {
   
   private static final String BUILD_INSERT_STM =
       "INSERT INTO bt_build\n" +
-          "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
-          "shot_bucket_session_storage, abort_on_failure, retryFailedTestsUpto,\n" +
-          "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
-          "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id, create_date)\n";
+      "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
+      "shot_bucket_session_storage, abort_on_failure, retryFailedTestsUpto,\n" +
+      "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
+      "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id, create_date)\n";
   
   private final TransactionTemplate transactionTemplate;
   
@@ -155,9 +157,9 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withProject(projectId)
         .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
     
+    testProvider.captureTests(newBuild.getFiles(), projectId, buildId);
+  
     buildCapabilityProvider.captureCapability(newBuild.getBuildCapability(), buildId);
-    
-    testProvider.captureTests(newBuild.getFiles(), buildId);
     
     buildVarProvider.capturePrimaryBuildVarsOverridingGiven(projectId,
         config.getBuildVars(),

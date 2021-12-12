@@ -9,4 +9,9 @@ public class LocalRunnerService extends ProductionRunnerService implements Runne
   public LocalRunnerService(APICoreProperties apiCoreProperties, WebClient webClient) {
     super(apiCoreProperties, webClient);
   }
+  
+  @Override
+  int getVmAvailabilityTimeoutMin() {
+    return 1;
+  }
 }

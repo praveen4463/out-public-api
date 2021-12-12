@@ -5,6 +5,12 @@ import java.util.List;
 
 public class IncomingTest {
   
+  public IncomingTest() {}
+  
+  public IncomingTest(String name) {
+    this.name = name;
+  }
+  
   private String name;
   
   @Nullable
@@ -27,5 +33,13 @@ public class IncomingTest {
   public IncomingTest setVersions(@Nullable List<String> versions) {
     this.versions = versions;
     return this;
+  }
+  
+  @Override
+  public String toString() {
+    return "IncomingTest{" +
+        "name='" + name + '\'' +
+        ", versions=" + versions +
+        '}';
   }
 }

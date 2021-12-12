@@ -3,7 +3,9 @@ package com.zylitics.api.dao;
 import com.zylitics.api.provider.BrowserProvider;
 import com.zylitics.api.util.CommonUtil;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class DaoBrowserProvider extends AbstractDaoProvider implements BrowserProvider {
   
   DaoBrowserProvider(NamedParameterJdbcTemplate jdbc) {
@@ -19,9 +21,10 @@ public class DaoBrowserProvider extends AbstractDaoProvider implements BrowserPr
             .withOther("display_version", browserVersion)
             .build(),
         CommonUtil.getSingleInt()).get(0);
-    return result > 0;
+    return result == 1;
   }
   
+  // TODO: this is not ideal, we want to update type of display_version and then use ordering
   @Override
   public String getLaterBrowsersVersion(String browserName) {
     String sql = "SELECT display_version FROM bt_browser_fe\n" +

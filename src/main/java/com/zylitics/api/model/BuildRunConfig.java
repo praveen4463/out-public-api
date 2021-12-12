@@ -1,12 +1,7 @@
 package com.zylitics.api.model;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.springframework.validation.annotation.Validated;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -21,8 +16,7 @@ public class BuildRunConfig {
   
   private BuildConfig buildConfig;
   
-  @NotNull
-  private List<Object> files;
+  private List<IncomingFile> files;
   
   public static class BuildConfig {
     
@@ -143,11 +137,11 @@ public class BuildRunConfig {
     return this;
   }
   
-  public List<Object> getFiles() {
+  public List<IncomingFile> getFiles() {
     return files;
   }
   
-  public BuildRunConfig setFiles(List<Object> files) {
+  public BuildRunConfig setFiles(List<IncomingFile> files) {
     this.files = files;
     return this;
   }

@@ -1,37 +1,12 @@
 package com.zylitics.api.util;
 
-import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import org.springframework.jdbc.core.RowMapper;
 
-import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class CommonUtil {
-  
-  public static String constructStorageFilePath(@Nullable String prefix, String fileName) {
-    if (Strings.isNullOrEmpty(prefix)) {
-      return fileName;
-    }
-    return prefix + (prefix.endsWith("/") ? "" : "/") + fileName;
-  }
-  
-  public static String getStorageFileNameWithoutPrefix(String fileName) {
-    int index = fileName.lastIndexOf("/");
-    if (index < 0) {
-      return fileName;
-    }
-    return fileName.substring(index + 1);
-  }
-  
-  public static String replaceUserId(String from, int userId) {
-    return from.replace("USER_ID", String.valueOf(userId));
-  }
   
   public static void validateSingleRowDbCommit(int result) {
     if (result != 1) {
@@ -79,13 +54,5 @@ public class CommonUtil {
       throws SQLException {
     return DateTimeUtil.utcTimeToEpochSecs(
         DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp(field)));
-  }
-  
-  public static List<Integer> commaDelToNumericList(@Nullable String commaDelimitedInt) {
-    if (Strings.isNullOrEmpty(commaDelimitedInt)) {
-      return new ArrayList<>(0);
-    }
-    return Splitter.on(",").omitEmptyStrings().trimResults()
-        .splitToList(commaDelimitedInt).stream().map(Integer::parseInt).collect(Collectors.toList());
   }
 }

@@ -1,18 +1,4 @@
 ---
 api-core:
-  front-end-base-url: http://localhost:3000
   storage:
-    server-logs-bucket: zl-server-logs-dev
-    elem-shots-bucket: zl-elem-shots-dev
-    user-data-bucket: zl-user-data-dev
-    common-uploads-bucket: zl-common-uploads-dev
-    shot-bucket-au: zl-session-assets-au-dev
-    shot-bucket-tok: zl-session-assets-tok-dev
-    shot-bucket-hk: zl-session-assets-hk-dev
-    shot-bucket-mum: zl-session-assets-mum-dev
-    shot-bucket-eu: zl-session-assets-eu-dev
-    shot-bucket-uk: zl-session-assets-uk-dev
-    shot-bucket-la: zl-session-assets-la-dev
-    shot-bucket-slake: zl-session-assets-slake-dev
     shot-bucket-usc: zl-session-assets-usc-dev
-    shot-bucket-nv: zl-session-assets-nv-dev

@@ -4,7 +4,9 @@ import com.zylitics.api.model.BuildVM;
 import com.zylitics.api.provider.BuildVMProvider;
 import com.zylitics.api.util.CommonUtil;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class DaoBuildVMProvider  extends AbstractDaoProvider implements BuildVMProvider {
   
   DaoBuildVMProvider(NamedParameterJdbcTemplate jdbc) {

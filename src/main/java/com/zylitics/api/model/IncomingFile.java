@@ -5,6 +5,12 @@ import java.util.List;
 
 public class IncomingFile {
   
+  public IncomingFile() {}
+  
+  public IncomingFile(String name) {
+    this.name = name;
+  }
+  
   private String name;
   
   @Nullable
@@ -27,5 +33,13 @@ public class IncomingFile {
   public IncomingFile setTests(@Nullable List<IncomingTest> tests) {
     this.tests = tests;
     return this;
+  }
+  
+  @Override
+  public String toString() {
+    return "IncomingFile{" +
+        "name='" + name + '\'' +
+        ", tests=" + tests +
+        '}';
   }
 }

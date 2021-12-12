@@ -27,7 +27,7 @@ public class ProductionRunnerService implements RunnerService {
     String baseUrl = buildBaseUrl(runnerIP, servicesProps);
     String statusEndpoint = "/status";
     // if any timeout occurs while polling for status, let exception throw
-    new UrlChecker().waitUntilAvailable(VM_AVAILABILITY_TIMEOUT_MIN, TimeUnit.MINUTES,
+    new UrlChecker().waitUntilAvailable(getVmAvailabilityTimeoutMin(), TimeUnit.MINUTES,
         baseUrl + statusEndpoint);
     String buildsEndpoint = "/builds";
     // let exception throw when api returns error, we don't need to send that error to user.
@@ -42,6 +42,10 @@ public class ProductionRunnerService implements RunnerService {
       throw new RuntimeException("Unexpectedly got empty response");
     }
     return response.getSessionId();
+  }
+  
+  int getVmAvailabilityTimeoutMin() {
+    return VM_AVAILABILITY_TIMEOUT_MIN;
   }
   
   private String buildBaseUrl(String runnerIP, APICoreProperties.Services servicesProps) {

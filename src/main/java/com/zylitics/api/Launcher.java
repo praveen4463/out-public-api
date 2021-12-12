@@ -1,11 +1,7 @@
 package com.zylitics.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zylitics.api.controllers.RunnerService;
@@ -15,20 +11,10 @@ import com.zylitics.api.services.LocalRunnerService;
 import com.zylitics.api.services.LocalVMService;
 import com.zylitics.api.services.ProductionRunnerService;
 import com.zylitics.api.services.ProductionVMService;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.web.servlet.DelegatingFilterProxyRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -36,17 +22,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
-import java.io.FileInputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
 
 // TODO: I am not too sure what DataAccessExceptions should be re-tried, let's first watch logs and
 //  decide if retry can help recovering from them. Hikari automatically retries until connection
@@ -57,12 +35,6 @@ import java.util.List;
 //  https://docs.spring.io/spring/docs/current/spring-framework-reference/data-access.html#dao-exceptions
 @SpringBootApplication
 public class Launcher {
-  
-  private static final String USER_INFO_REQ_HEADER = "X-Endpoint-API-UserInfo";
-  
-  private static final String FIREBASE_SERVICE_ACCOUNT_KEY = "FIREBASE_SA";
-  
-  private static final String FIREBASE_LOCAL_SERVICE_ACCOUNT_KEY = "FIREBASE_SA_LOCAL";
   
   public static void main(String[] args) {
     SpringApplication.run(Launcher.class, args);
@@ -142,7 +114,7 @@ public class Launcher {
     String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
         + ":" + secret).getBytes());
     HttpClient httpClient = HttpClient.create()
-        .responseTimeout(Duration.ofMinutes(300));
+        .responseTimeout(Duration.ofMinutes(300)); // 5h of timeout for now
     WebClient webClient = webClientBuilder
         .clientConnector(new ReactorClientHttpConnector(httpClient))
         .defaultHeader("Authorization", btbrUserAuthHeader)

@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 public class BuildController extends AbstractController {
   
   private static final String NEW_SESSION_ERROR = "An internal server error occurred" +
-      " while creating new session. We've been notified and this should be fixed very soon";
+      " while creating new build.";
   
   private static final String VM_NOT_CREATED_ERROR = "Couldn't create a VM for this build." +
       " Please try in a few minutes or contact us if problem persists";
@@ -73,10 +73,13 @@ public class BuildController extends AbstractController {
   @PostMapping("/projects/{projectId}/builds")
   @SuppressWarnings("unused")
   public ResponseEntity<?> newBuild(
-      @Validated @RequestBody BuildRunConfig config,
+      @Validated @RequestBody(required = false) BuildRunConfig config,
       @PathVariable @Min(1) int projectId,
       @RequestHeader(API_KEY_REQ_HEADER) String apiKey
   ) {
+    if (config == null) {
+      config = new BuildRunConfig();
+    }
     int userId = common.verifyOrganizationProjectAndGetUserId(apiKey, projectId)
         .orElseThrow(() -> new UnauthorizedException("Either the API key is invalid or given" +
             " project wasn't found."));
@@ -91,7 +94,7 @@ public class BuildController extends AbstractController {
     // Same bucket for all as this api is accessed org wide, and we don't want to set it to a
     // particular user.
     newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
-    newBuild.setFiles(new FilesParser().parse(config.getFiles()));
+    newBuild.setFiles(config.getFiles());
     newBuild.setBuildCapability(deduceBuildCaps(config));
     newBuild.setBuildConfig(deduceBuildConfig(config));
     
@@ -182,6 +185,9 @@ public class BuildController extends AbstractController {
     String platform;
   
     BuildRunConfig.BuildCapability configBCaps = config.getBuildCapability();
+    if (configBCaps == null) {
+      configBCaps = new BuildRunConfig.BuildCapability();
+    }
     OSDescriptor osDescriptor = OSConfig.understandOs(configBCaps.getOs() != null
         ? configBCaps.getOs() : "win10");
     os = osDescriptor.getName();
@@ -207,6 +213,9 @@ public class BuildController extends AbstractController {
   BuildConfig deduceBuildConfig(BuildRunConfig config) {
     String disRes;
     BuildRunConfig.BuildConfig configBConf = config.getBuildConfig();
+    if (configBConf == null) {
+      configBConf = new BuildRunConfig.BuildConfig();
+    }
     
     if (configBConf.getDisplayResolution() != null) {
       disRes = configBConf.getDisplayResolution();

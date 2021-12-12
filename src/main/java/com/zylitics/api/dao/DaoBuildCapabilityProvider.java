@@ -5,7 +5,9 @@ import com.zylitics.api.provider.BuildCapabilityProvider;
 import com.zylitics.api.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public class DaoBuildCapabilityProvider extends AbstractDaoProvider
     implements BuildCapabilityProvider {
   
@@ -37,7 +39,7 @@ public class DaoBuildCapabilityProvider extends AbstractDaoProvider
         "false, true,\n" +
         "'FATAL', false, false,\n" +
         "false, false, 'info',\n" +
-        "true\n";
+        "true";
     int result = jdbc.update(sql, new SqlParamsBuilder()
         .withInteger("bt_build_id", buildId)
         .withVarchar("os", buildCapability.getOs())
