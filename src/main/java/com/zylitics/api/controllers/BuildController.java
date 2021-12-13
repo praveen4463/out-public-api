@@ -6,7 +6,6 @@ import com.zylitics.api.config.OSConfig;
 import com.zylitics.api.dao.Common;
 import com.zylitics.api.exception.HttpRequestException;
 import com.zylitics.api.exception.UnauthorizedException;
-import com.zylitics.api.internal.FilesParser;
 import com.zylitics.api.model.*;
 import com.zylitics.api.provider.*;
 import com.zylitics.api.util.OSDescriptor;
@@ -227,7 +226,7 @@ public class BuildController extends AbstractController {
     }
     return new BuildConfig()
         .setDisplayResolution(disRes)
-        .setTimezone(configBConf.getTimezone())
+        .setTimezone(configBConf.getTimezone() == null ? "UTC" : configBConf.getTimezone())
         .setRetryFailedTestsUpto(configBConf.getRetryFailedTestsUpto())
         .setBuildVars(configBConf.getBuildVars());
   }

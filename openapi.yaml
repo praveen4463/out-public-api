@@ -6,14 +6,14 @@
 # Before running, make sure to switch gcloud's project so that api is created on correct project.
 swagger: "2.0"
 info:
-  description: Zylitics api
-  title: Zylitics api
+  description: Outomated api
+  title: Outomated api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.0.1
-host: api.zylitics.io
+  version: 0.0.2
+host: api.outomated.com
 x-google-endpoints:
-  - name: api.zylitics.io
+  - name: api.outomated.com
 basePath: /beta
 schemes:
   - http # TLS is terminated before hitting ESP, so only http.
@@ -60,46 +60,61 @@ parameters:
     type: integer
     required: true
 definitions:
-  RunnerPreferences:
+  IncomingTest:
     type: object
     properties:
-      abortOnFailure:
-        type: boolean
-      aetKeepSingleWindow:
-        type: boolean
-      aetUpdateUrlBlank:
-        type: boolean
-      aetResetTimeouts:
-        type: boolean
-      aetDeleteAllCookies:
-        type: boolean
-  BuildRunConfig:
+      name:
+        type: string
+      versions:
+        type: array
+        items:
+          type: string
+  IncomingFile:
     type: object
-    required:
-      - buildCapabilityId
-      - displayResolution
-      - timezone
-      - versionIds
     properties:
-      buildCapabilityId:
-        type: integer
+      name:
+        type: string
+      tests:
+        type: array
+        items:
+          $ref: '#/definitions/IncomingTest'
+  BuildConfig:
+    type: object
+    properties:
       displayResolution:
         type: string
       timezone:
         type: string
-      selectedBuildVarIdPerKey:
+      retryFailedTestsUpto:
+        type: integer
+      buildVars:
         type: object
         additionalProperties:
-          type: integer
-      runnerPreferences:
-        $ref: '#/definitions/RunnerPreferences'
-      buildSourceType:
+          type: string
+  BuildCapability:
+    type: object
+    properties:
+      os:
         type: string
-        enum: [IDE, CI, NOT_IDE]
-      versionIds:
+      browser:
+        type: string
+      browserVersion:
+        type: string
+  BuildRunConfig:
+    type: object
+    properties:
+      buildName:
+        type: string
+      waitForCompletion:
+        type: boolean
+      buildCapability:
+        $ref: '#/definitions/BuildCapability'
+      buildConfig:
+        $ref: '#/definitions/BuildConfig'
+      files:
         type: array
         items:
-          type: integer
+          $ref: '#/definitions/IncomingFile'
   ApiError:
     type: object
     required:

@@ -8,7 +8,7 @@ metadata:
   name: zl-api-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-api
-    app.kubernetes.io/version: &VERSION 0.0.1
+    app.kubernetes.io/version: &VERSION 0.0.2
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
@@ -36,13 +36,13 @@ spec:
           args: [
               "--http_port=4000",
               "--backend=127.0.0.1:8080",
-              "--service=api.zylitics.io",
+              "--service=api.outomated.com",
               "--rollout_strategy=managed",
           ]
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-api:0.0.1
+          image: us.gcr.io/zl-infra-main/zl-api:0.0.2
           imagePullPolicy: IfNotPresent
           ports:
             - name: &CONTAINER_PORT container-port
@@ -114,10 +114,10 @@ metadata:
 spec:
   # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1beta1-extensions
   tls:
-    - secretName: zl-k8s-univ-cert
+    - secretName: zl-k8s-out-cert
   rules:
     # we can add a default backend later on, that serve requests that don't match any path.
-    - host: api.zylitics.io
+    - host: api.outomated.com
       http:
         paths:
           - path: /
