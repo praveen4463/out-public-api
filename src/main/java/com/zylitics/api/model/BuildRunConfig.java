@@ -26,6 +26,8 @@ public class BuildRunConfig {
   
     private int retryFailedTestsUpto;
   
+    private Boolean notifyOnCompletion;
+  
     private Map<String, String> buildVars;
   
     public String getDisplayResolution() {
@@ -52,6 +54,15 @@ public class BuildRunConfig {
   
     public BuildConfig setRetryFailedTestsUpto(int retryFailedTestsUpto) {
       this.retryFailedTestsUpto = retryFailedTestsUpto;
+      return this;
+    }
+  
+    public Boolean getNotifyOnCompletion() {
+      return notifyOnCompletion;
+    }
+  
+    public BuildConfig setNotifyOnCompletion(Boolean notifyOnCompletion) {
+      this.notifyOnCompletion = notifyOnCompletion;
       return this;
     }
   

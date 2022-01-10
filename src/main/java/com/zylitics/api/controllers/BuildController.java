@@ -228,6 +228,7 @@ public class BuildController extends AbstractController {
         .setDisplayResolution(disRes)
         .setTimezone(configBConf.getTimezone() == null ? "UTC" : configBConf.getTimezone())
         .setRetryFailedTestsUpto(configBConf.getRetryFailedTestsUpto())
+        .setNotifyOnCompletion(configBConf.getNotifyOnCompletion())
         .setBuildVars(configBConf.getBuildVars());
   }
   
