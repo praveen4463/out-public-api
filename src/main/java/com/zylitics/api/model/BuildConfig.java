@@ -10,7 +10,7 @@ public class BuildConfig {
   
   private int retryFailedTestsUpto;
   
-  private Boolean notifyOnCompletion;
+  private boolean notifyOnCompletion;
   
   private Map<String, String> buildVars;
   
@@ -41,11 +41,11 @@ public class BuildConfig {
     return this;
   }
   
-  public Boolean getNotifyOnCompletion() {
+  public boolean getNotifyOnCompletion() {
     return notifyOnCompletion;
   }
   
-  public BuildConfig setNotifyOnCompletion(Boolean notifyOnCompletion) {
+  public BuildConfig setNotifyOnCompletion(boolean notifyOnCompletion) {
     this.notifyOnCompletion = notifyOnCompletion;
     return this;
   }
