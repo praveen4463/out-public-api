@@ -14,3 +14,13 @@ Bug fixes
 
 1. Made `notifyOnCompletion` primitive boolean rather than Boolean which caused null exception when
    not passed.
+
+## v0.0.5
+
+Enhancements
+
+### Enhancements
+
+1. Dropped one of the vm zone and kept just one for now. This is done so that we have to manage just
+   one zone and don't see the other one when listing. The other zone will still be reattempted in
+   provisioner if it fails in the given zone.
