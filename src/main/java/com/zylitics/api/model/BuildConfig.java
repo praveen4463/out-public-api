@@ -8,7 +8,11 @@ public class BuildConfig {
   
   private String timezone;
   
-  private int retryFailedTestsUpto;
+  private boolean captureShots;
+  
+  private boolean captureDriverLogs;
+  
+  private Integer retryFailedTestsUpto;
   
   private boolean notifyOnCompletion;
   
@@ -32,11 +36,29 @@ public class BuildConfig {
     return this;
   }
   
-  public int getRetryFailedTestsUpto() {
+  public boolean isCaptureShots() {
+    return captureShots;
+  }
+  
+  public BuildConfig setCaptureShots(boolean captureShots) {
+    this.captureShots = captureShots;
+    return this;
+  }
+  
+  public boolean isCaptureDriverLogs() {
+    return captureDriverLogs;
+  }
+  
+  public BuildConfig setCaptureDriverLogs(boolean captureDriverLogs) {
+    this.captureDriverLogs = captureDriverLogs;
+    return this;
+  }
+  
+  public Integer getRetryFailedTestsUpto() {
     return retryFailedTestsUpto;
   }
   
-  public BuildConfig setRetryFailedTestsUpto(int retryFailedTestsUpto) {
+  public BuildConfig setRetryFailedTestsUpto(Integer retryFailedTestsUpto) {
     this.retryFailedTestsUpto = retryFailedTestsUpto;
     return this;
   }

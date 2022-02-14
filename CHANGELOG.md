@@ -24,3 +24,12 @@ Enhancements
 1. Dropped one of the vm zone and kept just one for now. This is done so that we have to manage just
    one zone and don't see the other one when listing. The other zone will still be reattempted in
    provisioner if it fails in the given zone.
+
+## v0.0.6
+
+Enhancements
+
+### Enhancements
+
+1. Added APIDefault
+2. Added support for screenshot and driver logs config option

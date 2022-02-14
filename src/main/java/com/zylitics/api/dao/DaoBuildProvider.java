@@ -129,12 +129,12 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     String sql = "INSERT INTO bt_build\n" +
         "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
         "shot_bucket_session_storage, abort_on_failure, retryFailedTestsUpto,\n" +
-        "notify_on_completion,\n" +
+        "capture_shots, capture_driver_logs, notify_on_completion,\n" +
         "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
         "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id, create_date)\n" +
         "VALUES (:build_key, :name, :server_screen_size, :server_timezone_with_dst,\n" +
         ":shot_bucket_session_storage, :abort_on_failure, :retryFailedTestsUpto,\n" +
-        ":notify_on_completion,\n" +
+        ":capture_shots, :capture_driver_logs, :notify_on_completion,\n" +
         ":aet_keep_single_window,\n" +
         ":aet_update_url_blank, :aet_reset_timeouts, :aet_delete_all_cookies, :bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date) RETURNING bt_build_id";
@@ -147,6 +147,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withVarchar("shot_bucket_session_storage", newBuild.getShotBucket())
         .withBoolean("abort_on_failure", false)
         .withInteger("retryFailedTestsUpto", config.getRetryFailedTestsUpto())
+        .withBoolean("capture_shots", config.isCaptureShots())
+        .withBoolean("capture_driver_logs", config.isCaptureDriverLogs())
         .withBoolean("notify_on_completion", config.getNotifyOnCompletion())
         .withBoolean("aet_keep_single_window", true)
         .withBoolean("aet_update_url_blank", true)

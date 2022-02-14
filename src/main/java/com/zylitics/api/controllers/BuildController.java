@@ -47,6 +47,8 @@ public class BuildController extends AbstractController {
   
   private final BrowserProvider browserProvider;
   
+  private final APIDefaultsProvider apiDefaultsProvider;
+  
   private final VMService vmService;
   
   private final RunnerService runnerService;
@@ -57,6 +59,7 @@ public class BuildController extends AbstractController {
                          RunnerService runnerService,
                          UserPlanProvider userPlanProvider,
                          BrowserProvider browserProvider,
+                         APIDefaultsProvider apiDefaultsProvider,
                          APICoreProperties apiCoreProperties,
                          Common common) {
     this.buildProvider = buildProvider;
@@ -65,6 +68,7 @@ public class BuildController extends AbstractController {
     this.runnerService = runnerService;
     this.userPlanProvider = userPlanProvider;
     this.browserProvider = browserProvider;
+    this.apiDefaultsProvider = apiDefaultsProvider;
     this.apiCoreProperties = apiCoreProperties;
     this.common = common;
   }
@@ -79,9 +83,12 @@ public class BuildController extends AbstractController {
     if (config == null) {
       config = new BuildRunConfig();
     }
-    int userId = common.verifyOrganizationProjectAndGetUserId(apiKey, projectId)
+    UserDetail userDetail = common.verifyOrganizationProjectAndGetUserDetail(apiKey, projectId)
         .orElseThrow(() -> new UnauthorizedException("Either the API key is invalid or given" +
             " project wasn't found."));
+    
+    APIDefaults apiDefaults = apiDefaultsProvider.getApiDefaults(userDetail.getOrganizationId())
+        .orElse(new APIDefaults());
     
     NewBuild newBuild = new NewBuild();
     newBuild.setBuildName(config.getBuildName());
@@ -95,11 +102,11 @@ public class BuildController extends AbstractController {
     newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
     newBuild.setFiles(config.getFiles());
     newBuild.setBuildCapability(deduceBuildCaps(config));
-    newBuild.setBuildConfig(deduceBuildConfig(config));
+    newBuild.setBuildConfig(deduceBuildConfig(config, apiDefaults));
     
-    long buildRequestId = getNewBuildRequest(newBuild.getSourceType(), userId);
+    long buildRequestId = getNewBuildRequest(newBuild.getSourceType(), userDetail.getUserId());
     try {
-      int buildId = createNewBuild(buildRequestId, newBuild, projectId, userId);
+      int buildId = createNewBuild(buildRequestId, newBuild, projectId, userDetail.getUserId());
       SessionFailureReason sessionFailureReason = null;
       try {
         buildProvider.updateSessionRequestStart(buildId);
@@ -209,8 +216,9 @@ public class BuildController extends AbstractController {
         .setBrowserVersion(browserVersion);
   }
   
-  BuildConfig deduceBuildConfig(BuildRunConfig config) {
+  BuildConfig deduceBuildConfig(BuildRunConfig config, APIDefaults apiDefaults) {
     String disRes;
+    int retryUpto = 0;
     BuildRunConfig.BuildConfig configBConf = config.getBuildConfig();
     if (configBConf == null) {
       configBConf = new BuildRunConfig.BuildConfig();
@@ -224,10 +232,21 @@ public class BuildController extends AbstractController {
     } else {
       disRes = "1366x768";
     }
+    
+    if (configBConf.getRetryFailedTestsUpto() == null) {
+      if (apiDefaults.getRetryFailedTestsUpto() != null) {
+        retryUpto = apiDefaults.getRetryFailedTestsUpto();
+      }
+    } else {
+      retryUpto = configBConf.getRetryFailedTestsUpto();
+    }
+    
     return new BuildConfig()
         .setDisplayResolution(disRes)
         .setTimezone(configBConf.getTimezone() == null ? "UTC" : configBConf.getTimezone())
-        .setRetryFailedTestsUpto(configBConf.getRetryFailedTestsUpto())
+        .setCaptureShots(configBConf.isCaptureShots())
+        .setCaptureDriverLogs(configBConf.isCaptureDriverLogs())
+        .setRetryFailedTestsUpto(retryUpto)
         .setNotifyOnCompletion(configBConf.getNotifyOnCompletion())
         .setBuildVars(configBConf.getBuildVars());
   }
