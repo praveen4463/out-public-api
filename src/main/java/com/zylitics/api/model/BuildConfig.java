@@ -8,7 +8,7 @@ public class BuildConfig {
   
   private String timezone;
   
-  private boolean captureShots;
+  private Boolean captureShots;
   
   private boolean captureDriverLogs;
   
@@ -36,11 +36,11 @@ public class BuildConfig {
     return this;
   }
   
-  public boolean isCaptureShots() {
+  public Boolean isCaptureShots() {
     return captureShots;
   }
   
-  public BuildConfig setCaptureShots(boolean captureShots) {
+  public BuildConfig setCaptureShots(Boolean captureShots) {
     this.captureShots = captureShots;
     return this;
   }

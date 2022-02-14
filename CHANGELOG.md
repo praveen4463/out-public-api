@@ -33,3 +33,11 @@ Enhancements
 
 1. Added APIDefault
 2. Added support for screenshot and driver logs config option
+
+## v0.0.7
+
+Bug fixes
+
+### Bug fixes
+
+1. When shot preference not set, set it to `true`

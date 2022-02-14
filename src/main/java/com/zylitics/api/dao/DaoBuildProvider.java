@@ -147,7 +147,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withVarchar("shot_bucket_session_storage", newBuild.getShotBucket())
         .withBoolean("abort_on_failure", false)
         .withInteger("retryFailedTestsUpto", config.getRetryFailedTestsUpto())
-        .withBoolean("capture_shots", config.isCaptureShots())
+        .withBoolean("capture_shots", config.isCaptureShots() == null || config.isCaptureShots()) // when not sent, it's true
         .withBoolean("capture_driver_logs", config.isCaptureDriverLogs())
         .withBoolean("notify_on_completion", config.getNotifyOnCompletion())
         .withBoolean("aet_keep_single_window", true)
