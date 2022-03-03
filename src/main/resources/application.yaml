@@ -1,6 +1,7 @@
 ---
 api-core:
   project-id: zl-infra-main
+  front-end-base-url: https://app.outomated.com
   kms-project-id: zl-win-nodes
   cloud-kms:
     key-ring: zl-apps-auth-secret
@@ -30,6 +31,14 @@ api-core:
     btbr-auth-user: root
     btbr-auth-secret-cloud-file: btbr-api-key.encrypted
     local-vm-env-var: VM_LOCAL
+    sendgrid-api-key-secret-cloud-file: sendgrid-primary-mail-sender.encrypted
   storage:
     shot-bucket-usc: zl-session-assets-usc
+  email:
+    support-email: support@outomated.com
+    email-sender-name: Outomated Alerts
+    email-parallel-build-success-tmp-id: d-f6624a9ca16848568fc6710005e96f28
+    email-parallel-build-failed-tmp-id: d-72e8a37147c74cb0a182cc66558c1035
+    email-pref-page: /settings/email-pref
+    builds-page: /builds
 ---

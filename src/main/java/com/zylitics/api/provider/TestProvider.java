@@ -7,5 +7,13 @@ import java.util.List;
 
 public interface TestProvider {
   
+  /*
+  Splits the available tests among the provided buildIds equally and captures them.
+   */
+  void splitAndCaptureTests(List<Integer> buildIds,
+                            @Nullable List<IncomingFile> incomingFiles,
+                            int projectId,
+                            String insufficientTestsExMsg) throws IllegalArgumentException;
+  
   void captureTests(@Nullable List<IncomingFile> incomingFiles, int projectId, int buildId);
 }

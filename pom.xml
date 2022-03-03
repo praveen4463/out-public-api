@@ -15,6 +15,7 @@
     <google-cloud-storage.version>1.113.14</google-cloud-storage.version>
     <jib-maven-plugin.version>3.1.4</jib-maven-plugin.version>
     <stackdriver-logback.version>0.120.4-alpha</stackdriver-logback.version>
+    <sendgrid.version>4.7.1</sendgrid.version>
 
     <projectId>zl-infra-main</projectId>
     <skipTest>false</skipTest>
@@ -56,6 +57,11 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-kms</artifactId>
       <version>${google-cloud-kms.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.sendgrid</groupId>
+      <artifactId>sendgrid-java</artifactId>
+      <version>${sendgrid.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>

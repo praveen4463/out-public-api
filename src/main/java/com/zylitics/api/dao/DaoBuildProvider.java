@@ -1,5 +1,6 @@
 package com.zylitics.api.dao;
 
+import com.google.common.base.Preconditions;
 import com.zylitics.api.model.*;
 import com.zylitics.api.provider.*;
 import com.zylitics.api.util.CommonUtil;
@@ -10,6 +11,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -108,11 +111,22 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
-  public int newBuild(NewBuild newBuild,
-                      long buildRequestId,
-                      int projectId) {
-    Integer newBuildId = transactionTemplate.execute(ts -> newBuildInTransaction(
-        newBuild, buildRequestId, projectId));
+  public List<Integer> createNewBuilds(List<NewBuild> newBuilds,
+                                       @Nullable List<IncomingFile> incomingFiles,
+                                       int projectId,
+                                       String insufficientTestsExMsg) {
+    List<Integer> newBuildIds = transactionTemplate.execute(ts -> createNewBuildsInTransaction(
+        newBuilds, incomingFiles, projectId, insufficientTestsExMsg));
+    Objects.requireNonNull(newBuildIds);
+    Preconditions.checkArgument(newBuilds.size() == newBuildIds.size());
+    return newBuildIds;
+  }
+  
+  @Override
+  public int createNewBuild(NewBuild newBuild,
+                            int projectId) {
+    Integer newBuildId = transactionTemplate.execute(ts -> createNewBuildInTransaction(
+        newBuild, projectId));
     Objects.requireNonNull(newBuildId);
     return newBuildId;
   }
@@ -123,9 +137,32 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
     return randoms.generateRandom(10);
   }
   
-  private int newBuildInTransaction(NewBuild newBuild,
-                                    long buildRequestId,
-                                    int projectId) {
+  private List<Integer> createNewBuildsInTransaction(List<NewBuild> newBuilds,
+                                                     @Nullable List<IncomingFile> incomingFiles,
+                                                     int projectId,
+                                                     String insufficientTestsExMsg) {
+    List<Integer> newBuildIds = new ArrayList<>();
+    
+    newBuilds.forEach(newBuild -> {
+      int buildId = createBuildRecord(newBuild, projectId);
+      newBuildIds.add(buildId);
+      
+      buildCapabilityProvider.captureCapability(newBuild.getBuildCapability(), buildId);
+  
+      buildVarProvider.capturePrimaryBuildVarsOverridingGiven(projectId,
+          newBuild.getBuildConfig().getBuildVars(),
+          buildId);
+  
+      globalVarProvider.captureGlobalVars(projectId, buildId);
+    });
+  
+    testProvider.splitAndCaptureTests(newBuildIds, incomingFiles, projectId,
+        insufficientTestsExMsg);
+  
+    return newBuildIds;
+  }
+  
+  private int createBuildRecord(NewBuild newBuild, int projectId) {
     String sql = "INSERT INTO bt_build\n" +
         "(build_key, name, server_screen_size, server_timezone_with_dst,\n" +
         "shot_bucket_session_storage, abort_on_failure, retryFailedTestsUpto,\n" +
@@ -139,7 +176,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         ":aet_update_url_blank, :aet_reset_timeouts, :aet_delete_all_cookies, :bt_project_id,\n" +
         ":source_type, :bt_build_request_id, :create_date) RETURNING bt_build_id";
     BuildConfig config = newBuild.getBuildConfig();
-    int buildId = jdbc.query(sql, new SqlParamsBuilder()
+    return jdbc.query(sql, new SqlParamsBuilder()
         .withVarchar("build_key", getBuildKey())
         .withOther("name", newBuild.getBuildName())
         .withVarchar("server_screen_size", config.getDisplayResolution())
@@ -155,9 +192,16 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         .withBoolean("aet_reset_timeouts", true)
         .withBoolean("aet_delete_all_cookies", true)
         .withOther("source_type", newBuild.getSourceType())
-        .withBigint("bt_build_request_id", buildRequestId)
+        .withBigint("bt_build_request_id", newBuild.getBuildRequestId())
         .withProject(projectId)
         .withCreateDate().build(), CommonUtil.getSingleInt()).get(0);
+  }
+  
+  private int createNewBuildInTransaction(NewBuild newBuild,
+                                          int projectId) {
+    int buildId = createBuildRecord(newBuild, projectId);
+    
+    BuildConfig config = newBuild.getBuildConfig();
     
     testProvider.captureTests(newBuild.getFiles(), projectId, buildId);
   

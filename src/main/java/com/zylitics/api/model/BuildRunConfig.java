@@ -20,6 +20,8 @@ public class BuildRunConfig {
   
   public static class BuildConfig {
     
+    private int totalParallel;
+    
     private String displayResolution;
   
     private String timezone;
@@ -33,6 +35,15 @@ public class BuildRunConfig {
     private boolean notifyOnCompletion;
   
     private Map<String, String> buildVars;
+  
+    public int getTotalParallel() {
+      return totalParallel;
+    }
+  
+    public BuildConfig setTotalParallel(int totalParallel) {
+      this.totalParallel = totalParallel;
+      return this;
+    }
   
     public String getDisplayResolution() {
       return displayResolution;

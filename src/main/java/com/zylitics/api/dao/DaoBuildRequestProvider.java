@@ -1,5 +1,6 @@
 package com.zylitics.api.dao;
 
+import com.google.common.base.Preconditions;
 import com.zylitics.api.model.BuildRequest;
 import com.zylitics.api.model.BuildSourceType;
 import com.zylitics.api.provider.BuildRequestProvider;
@@ -18,22 +19,27 @@ public class DaoBuildRequestProvider extends AbstractDaoProvider implements Buil
   
   @Override
   public long newBuildRequest(BuildRequest buildRequest) {
-    String sql = "INSERT INTO bt_build_request (source_type, zluser_id)\n" +
-        "VALUES (:source_type, :zluser_id) RETURNING bt_build_request_id";
+    Preconditions.checkArgument(buildRequest.getTotalParallel() > 0,
+        "Total parallel can't be less than 1");
+    String sql = "INSERT INTO bt_build_request (source_type, total_parallel, zluser_id)\n" +
+        "VALUES (:source_type, :total_parallel, :zluser_id) RETURNING bt_build_request_id";
     return jdbc.query(sql, new SqlParamsBuilder()
         .withInteger("zluser_id", buildRequest.getUserId())
-        .withOther("source_type", buildRequest.getBuildSourceType()).build(),
+        .withOther("source_type", buildRequest.getBuildSourceType())
+        .withInteger("total_parallel", buildRequest.getTotalParallel()).build(),
         CommonUtil.getSingleLong()).get(0);
   }
   
   @Override
   public List<BuildRequest> getCurrentBuildRequests(int userId) {
-    String sql = "SELECT source_type FROM bt_build_request WHERE zluser_id = :zluser_id\n" +
+    String sql = "SELECT source_type, total_parallel\n" +
+        "FROM bt_build_request WHERE zluser_id = :zluser_id\n" +
         "AND completed = false";
     return jdbc.query(sql, new SqlParamsBuilder()
         .withInteger("zluser_id", userId).build(), (rs, rowNum) ->
         new BuildRequest()
             .setBuildSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
+            .setTotalParallel(rs.getInt("total_parallel"))
             .setUserId(userId));
   }
   

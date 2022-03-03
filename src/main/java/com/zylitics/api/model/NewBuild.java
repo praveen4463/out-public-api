@@ -16,6 +16,8 @@ public class NewBuild {
   
   private List<IncomingFile> files;
   
+  private long buildRequestId;
+  
   public String getBuildName() {
     return buildName;
   }
@@ -67,6 +69,15 @@ public class NewBuild {
   
   public NewBuild setFiles(List<IncomingFile> files) {
     this.files = files;
+    return this;
+  }
+  
+  public long getBuildRequestId() {
+    return buildRequestId;
+  }
+  
+  public NewBuild setBuildRequestId(long buildRequestId) {
+    this.buildRequestId = buildRequestId;
     return this;
   }
 }
