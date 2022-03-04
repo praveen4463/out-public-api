@@ -8,7 +8,7 @@ metadata:
   name: zl-api-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-api
-    app.kubernetes.io/version: &VERSION 0.0.7
+    app.kubernetes.io/version: &VERSION 0.0.8
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
@@ -42,7 +42,7 @@ spec:
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-api:0.0.7
+          image: us.gcr.io/zl-infra-main/zl-api:0.0.8
           imagePullPolicy: IfNotPresent
           ports:
             - name: &CONTAINER_PORT container-port

@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public class DaoAPIDefaults extends AbstractDaoProvider implements APIDefaultsProvider {
+public class DaoAPIDefaultsProvider extends AbstractDaoProvider
+    implements APIDefaultsProvider {
   
-  DaoAPIDefaults(NamedParameterJdbcTemplate jdbc) {
+  DaoAPIDefaultsProvider(NamedParameterJdbcTemplate jdbc) {
     super(jdbc);
   }
   

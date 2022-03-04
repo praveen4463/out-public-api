@@ -2,7 +2,10 @@ package com.zylitics.api.dao;
 
 import com.zylitics.api.model.IncomingFile;
 import com.zylitics.api.model.IncomingTest;
+import com.zylitics.api.model.TestDetail;
+import com.zylitics.api.model.TestStatus;
 import com.zylitics.api.provider.TestProvider;
+import com.zylitics.api.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -116,5 +119,19 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
       throw new RuntimeException("No tests found for running. " +
           "Either the given tests don't exist or they've empty code.");
     }
+  }
+  
+  @Override
+  public List<TestDetail> getAllCompletedTestDetail(int buildId) {
+    String sql = "SELECT bt_test_version_name, bt_file_name, bt_test_name, status\n" +
+        "FROM bt_build_tests JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
+        "WHERE bt_build_id = :bt_build_id ORDER BY bt_build_tests_id";
+    return jdbc.query(sql,
+        new SqlParamsBuilder().withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+            new TestDetail()
+                .setVersion(rs.getString("bt_test_version_name"))
+                .setStatus(CommonUtil.convertEnumFromSqlVal(rs, "status", TestStatus.class))
+                .setFile(rs.getString("bt_file_name"))
+                .setTest(rs.getString("bt_test_name")));
   }
 }

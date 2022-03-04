@@ -49,6 +49,8 @@ public class BuildController extends AbstractController {
   
   private final APIDefaultsProvider apiDefaultsProvider;
   
+  private final TestProvider testProvider;
+  
   private final VMService vmService;
   
   private final RunnerService runnerService;
@@ -60,6 +62,7 @@ public class BuildController extends AbstractController {
                          UserPlanProvider userPlanProvider,
                          BrowserProvider browserProvider,
                          APIDefaultsProvider apiDefaultsProvider,
+                         TestProvider testProvider,
                          APICoreProperties apiCoreProperties,
                          Common common) {
     this.buildProvider = buildProvider;
@@ -69,6 +72,7 @@ public class BuildController extends AbstractController {
     this.userPlanProvider = userPlanProvider;
     this.browserProvider = browserProvider;
     this.apiDefaultsProvider = apiDefaultsProvider;
+    this.testProvider = testProvider;
     this.apiCoreProperties = apiCoreProperties;
     this.common = common;
   }
@@ -149,6 +153,9 @@ public class BuildController extends AbstractController {
               .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
           res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
           res.setError(build.getError());
+          if (config.isRequireDetailedResultInResponse()) {
+            res.setTestDetails(testProvider.getAllCompletedTestDetail(buildId));
+          }
         } else {
           res.setStatus(TestStatus.RUNNING.toString().toLowerCase(Locale.US));
         }
