@@ -12,7 +12,7 @@ public class BuildRunConfig {
   
   private Boolean waitForCompletion;
   
-  private boolean requireDetailedResultInResponse;
+  private boolean includeDetailedResultInResponse;
   
   private BuildCapability buildCapability;
   
@@ -154,12 +154,12 @@ public class BuildRunConfig {
     return this;
   }
   
-  public boolean isRequireDetailedResultInResponse() {
-    return requireDetailedResultInResponse;
+  public boolean isIncludeDetailedResultInResponse() {
+    return includeDetailedResultInResponse;
   }
   
-  public BuildRunConfig setRequireDetailedResultInResponse(boolean requireDetailedResultInResponse) {
-    this.requireDetailedResultInResponse = requireDetailedResultInResponse;
+  public BuildRunConfig setIncludeDetailedResultInResponse(boolean includeDetailedResultInResponse) {
+    this.includeDetailedResultInResponse = includeDetailedResultInResponse;
     return this;
   }
   

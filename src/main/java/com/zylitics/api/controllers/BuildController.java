@@ -153,7 +153,7 @@ public class BuildController extends AbstractController {
               .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
           res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
           res.setError(build.getError());
-          if (config.isRequireDetailedResultInResponse()) {
+          if (config.isIncludeDetailedResultInResponse()) {
             res.setTestDetails(testProvider.getAllCompletedTestDetail(buildId));
           }
         } else {

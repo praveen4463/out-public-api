@@ -8,7 +8,7 @@ metadata:
   name: zl-api-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-api
-    app.kubernetes.io/version: &VERSION 0.0.8
+    app.kubernetes.io/version: &VERSION 0.0.9
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:

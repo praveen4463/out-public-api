@@ -49,3 +49,11 @@ Enhancements
 ### Enhancements
 
 1. Added support for test detail in api response
+
+## v0.0.9
+
+Enhancements
+
+### Enhancements
+
+1. Renamed requireDetailedResultInResponse to includeDetailedResultInResponse
