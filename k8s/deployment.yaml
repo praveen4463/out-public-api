@@ -42,7 +42,7 @@ spec:
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-api:0.0.8
+          image: us.gcr.io/zl-infra-main/zl-api:0.0.9
           imagePullPolicy: IfNotPresent
           ports:
             - name: &CONTAINER_PORT container-port
