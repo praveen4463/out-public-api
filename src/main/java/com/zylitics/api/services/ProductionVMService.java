@@ -6,18 +6,19 @@ import com.zylitics.api.SecretsManager;
 import com.zylitics.api.controllers.VMService;
 import com.zylitics.api.config.APICoreProperties;
 import com.zylitics.api.model.BuildVM;
+import com.zylitics.api.model.NewBuild;
 import com.zylitics.api.model.NewBuildVM;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ProductionVMService implements VMService {
   
@@ -48,8 +49,7 @@ public class ProductionVMService implements VMService {
         .clientConnector(new ReactorClientHttpConnector(httpClient)).build();
   }
   
-  @Override
-  public BuildVM newBuildVM(NewBuildVM newBuildVM) {
+  private Mono<GetVMResponse> getVMResponseAsync(NewBuildVM newBuildVM) {
     APICoreProperties.Services services = apiCoreProperties.getServices();
     GetVMRequest.BuildProperties buildProperties = new GetVMRequest.BuildProperties();
     buildProperties.setBuildId(newBuildVM.getBuildId());
@@ -70,7 +70,7 @@ public class ProductionVMService implements VMService {
             "user-desired-browser", newBuildVM.getBrowserName() + ";" +
                 newBuildVM.getBrowserVersion(),
             "time-zone-with-dst", newBuildVM.getTimezone()
-    ));
+        ));
   
     GetVMRequest getVMRequest = new GetVMRequest();
     getVMRequest
@@ -82,7 +82,7 @@ public class ProductionVMService implements VMService {
     int totalZones = availableZones.size();
     String randomZone = availableZones.get(random.nextInt(totalZones));
     String endpoint = String.format("/zones/%s/grids", randomZone);
-    GetVMResponse response = webClient.post()
+    return webClient.post()
         .uri(uriBuilder -> uriBuilder
             .path(endpoint)
             .queryParam("requireRunningVM", newBuildVM.isRequireRunningVM())
@@ -91,14 +91,43 @@ public class ProductionVMService implements VMService {
         .bodyValue(getVMRequest)
         .accept(MediaType.APPLICATION_JSON)
         .retrieve()
-        .bodyToMono(GetVMResponse.class).block();
-    if (response == null) {
-      throw new RuntimeException("Unexpectedly got empty response");
-    }
+        .bodyToMono(GetVMResponse.class);
+  }
+  
+  private BuildVM getBuildVMFromResponse(GetVMResponse response, NewBuildVM newBuildVM) {
     return new BuildVM()
         .setInternalIp(response.getGridInternalIP())
         .setName(response.getGridName())
-        .setZone(response.getZone());
+        .setZone(response.getZone())
+        .setDeleteFromRunner(true)
+        .setBuildId(newBuildVM.getBuildId());
+  }
+  
+  @Override
+  public List<BuildVM> newBuildVMs(List<NewBuildVM> newBuildVMs) {
+    List<Mono<GetVMResponse>> monos = new ArrayList<>();
+    for (NewBuildVM newBuildVM : newBuildVMs) {
+      monos.add(getVMResponseAsync(newBuildVM));
+    }
+    Mono<List<GetVMResponse>> responsesInProgress =
+        Mono.zip(monos, objects -> Arrays.stream(objects).map(o ->
+            (GetVMResponse)o).collect(Collectors.toList()));
+    List<GetVMResponse> responses = responsesInProgress.block();
+    if (responses == null) {
+      throw new RuntimeException("Unexpectedly got empty response");
+    }
+    return IntStream.range(0, responses.size())
+        .mapToObj(i -> getBuildVMFromResponse(responses.get(i), newBuildVMs.get(i)))
+        .collect(Collectors.toList());
+  }
+  
+  @Override
+  public BuildVM newBuildVM(NewBuildVM newBuildVM) {
+    GetVMResponse response = getVMResponseAsync(newBuildVM).block();
+    if (response == null) {
+      throw new RuntimeException("Unexpectedly got empty response");
+    }
+    return getBuildVMFromResponse(response, newBuildVM);
   }
   
   private static class GetVMRequest {

@@ -25,6 +25,7 @@ api-core:
     wzgp-auth-secret-cloud-file: zl-wzgp-prod-test-auth.encrypt
     vm-machine-type: e2-standard-4
     vm-zones:
+      - us-central1-c
       - us-west1-b
     btbr-version: beta
     btbr-port: 8080

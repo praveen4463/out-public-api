@@ -12,6 +12,8 @@ public class BuildVM {
   
   private boolean deleteFromRunner;
   
+  private int buildId;
+  
   public int getId() {
     return id;
   }
@@ -54,6 +56,15 @@ public class BuildVM {
   
   public BuildVM setDeleteFromRunner(boolean deleteFromRunner) {
     this.deleteFromRunner = deleteFromRunner;
+    return this;
+  }
+  
+  public int getBuildId() {
+    return buildId;
+  }
+  
+  public BuildVM setBuildId(int buildId) {
+    this.buildId = buildId;
     return this;
   }
 }

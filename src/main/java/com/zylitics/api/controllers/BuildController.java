@@ -19,9 +19,11 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @RestController
@@ -80,6 +82,10 @@ public class BuildController extends AbstractController {
     this.common = common;
   }
   
+  private void notifyForParallelBuilds() {
+  
+  }
+  
   // !!This is a temporary way to enable parallel builds. A few things may not look right but that's
   // fine for now until we do it properly, later.
   private ResponseEntity<?> newParallelBuild(UserDetail userDetail,
@@ -88,12 +94,11 @@ public class BuildController extends AbstractController {
                                              int projectId) {
     boolean notifyOnComplete = normalizedConfig.getNotifyOnCompletion();
     int totalParallel = normalizedConfig.getTotalParallel();
-    boolean waitForCompletion = config.getWaitForCompletion() == null
-        || config.getWaitForCompletion();
+    BuildSourceType presetBuildSourceType = BuildSourceType.CI;
   
     BuildCapability normalizedCap = deduceBuildCaps(config);
     // In all cases, we want the runner to not notify on completion because it will be handled
-    // from this api, when enabled.
+    // from this method, when enabled.
     BuildConfig normalizedConfigForParallel = normalizedConfig.setNotifyOnCompletion(false);
     
     List<NewBuild> newBuilds = new ArrayList<>();
@@ -110,7 +115,10 @@ public class BuildController extends AbstractController {
         // Always set the source to something that makes runner sending a response only after build is
         // completed. This is done so that this api method can trigger post build completion steps
         // such as sending a composite email.
-        newBuild.setSourceType(BuildSourceType.CI);
+        // !! This will ignore 'waitForCompletion' settings for now. If we respect this setting and
+        // still want to perform completion steps, we will have to poll the db/runner until the completion,
+        // but I'm avoiding that complication for now.
+        newBuild.setSourceType(presetBuildSourceType);
         // Same bucket for all as this api is accessed org wide, and we don't want to set it to a
         // particular user.
         newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
@@ -132,67 +140,66 @@ public class BuildController extends AbstractController {
           projectId,
           "There are lesser tests in given project than the specified number of parallels." +
               "Number of tests must be equal to or greater than the given parallel number.");
+      
+      List<NewBuildVM> newBuildVMS = new ArrayList<>();
+      buildIds.forEach(buildId -> {
+        buildProvider.updateSessionRequestStart(buildId);
+        
+        NewBuildVM newBuildVM = new NewBuildVM()
+            .setBuildId(buildId)
+            .setRequireRunningVM(false)
+            .setDisplayResolution(normalizedConfigForParallel.getDisplayResolution())
+            .setTimezone(normalizedConfigForParallel.getTimezone())
+            .setBrowserName(normalizedCap.getBrowser())
+            .setBrowserVersion(normalizedCap.getBrowserVersion())
+            .setOs(normalizedCap.getOs());
+      });
   
       SessionFailureReason sessionFailureReason = null;
-      // For now if some builds fail to start session/VM, we will let the other success builds
-      // run but fail the current request.
-      buildIds.forEach(buildId -> {
+      try {
+        List<BuildVM> buildVMS;
         try {
-          buildProvider.updateSessionRequestStart(buildId);
-          // send a request to create/find a VM
-          BuildVM buildVM;
-          try {
-            buildVM = vmService.newBuildVM(new NewBuildVM()
-                .setBuildId(buildId)
-                .setRequireRunningVM(false)
-                .setDisplayResolution(newBuild.getBuildConfig().getDisplayResolution())
-                .setTimezone(newBuild.getBuildConfig().getTimezone())
-                .setBrowserName(newBuild.getBuildCapability().getBrowser())
-                .setBrowserVersion(newBuild.getBuildCapability().getBrowserVersion())
-                .setOs(newBuild.getBuildCapability().getOs()));
-            // set deleteFromRunner
-            buildVM.setDeleteFromRunner(true);
-          } catch (Throwable t) {
-            LOG.error("Couldn't create buildVM", t);
-            sessionFailureReason = SessionFailureReason.VM_NOT_CREATED;
-            throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, VM_NOT_CREATED_ERROR);
-          }
-          // save buildVM details to vm table
-          buildProvider.createAndUpdateVM(buildVM, buildId);
-          // start new session as we've a VM
-          String sessionId;
-          try {
-            sessionId =
-                runnerService.newSession(buildVM.getInternalIp(), buildId);
-          } catch (Throwable t) {
-            LOG.error("Couldn't start a new session", t);
-            sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
-            throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, NEW_SESSION_ERROR);
-          }
-          // updates session_request_end_date
-          buildProvider.updateSession(sessionId, buildId);
-    
-          NewBuildResponse res = new NewBuildResponse().setBuildId(buildId);
-          if (newBuild.getSourceType() == BuildSourceType.CI) {
-            Build build = buildProvider.getBuild(buildId)
-                .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
-            res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
-            res.setError(build.getError());
-          } else {
-            res.setStatus(TestStatus.RUNNING.toString().toLowerCase(Locale.US));
-          }
-          return ResponseEntity.ok(res);
+          buildVMS = vmService.newBuildVMs(newBuildVMS);
         } catch (Throwable t) {
-          // updates session_request_end_date
+          LOG.error("Couldn't create buildVMs", t);
+          sessionFailureReason = SessionFailureReason.VM_NOT_CREATED;
+          throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, VM_NOT_CREATED_ERROR);
+        }
+        buildVMS.forEach(buildProvider::createAndUpdateVM);
+        List<String> sessionIds;
+        try {
+          sessionIds = runnerService.newSessions(buildVMS);
+        } catch (Throwable t) {
+          LOG.error("Couldn't start a new session", t);
+          sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
+          throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, NEW_SESSION_ERROR);
+        }
+        
+        IntStream.range(0, sessionIds.size())
+            .forEach(i -> buildProvider.updateSession(sessionIds.get(i), buildIds.get(i)));
+        
+        // All builds done, perform completion steps.
+        if (notifyOnComplete) {
+          notifyForParallelBuilds();
+        }
+  
+        NewBuildResponse res = new NewBuildResponse().setBuildId(buildId);
+        Build build = buildProvider.getBuild(buildId)
+            .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
+        res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
+        return ResponseEntity.ok(res);
+      } catch (Throwable t) {
+        // updates session_request_end_date
+        for (int buildId : buildIds) {
           buildProvider.updateOnSessionFailure(
               sessionFailureReason != null ? sessionFailureReason : SessionFailureReason.EXCEPTION,
               sessionFailureReason == SessionFailureReason.VM_NOT_CREATED
                   ? VM_NOT_CREATED_ERROR
                   : NEW_SESSION_ERROR,
               buildId);
-          throw t;
         }
-      });
+        throw t;
+      }
     } catch (Throwable t) {
       buildRequestIds.forEach(this::markBuildRequestCompleted);
       if (t instanceof HttpRequestException) {
@@ -258,20 +265,18 @@ public class BuildController extends AbstractController {
               .setBrowserName(newBuild.getBuildCapability().getBrowser())
               .setBrowserVersion(newBuild.getBuildCapability().getBrowserVersion())
               .setOs(newBuild.getBuildCapability().getOs()));
-          // set deleteFromRunner
-          buildVM.setDeleteFromRunner(true);
         } catch (Throwable t) {
           LOG.error("Couldn't create buildVM", t);
           sessionFailureReason = SessionFailureReason.VM_NOT_CREATED;
           throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, VM_NOT_CREATED_ERROR);
         }
         // save buildVM details to vm table
-        buildProvider.createAndUpdateVM(buildVM, buildId);
+        buildProvider.createAndUpdateVM(buildVM);
         // start new session as we've a VM
         String sessionId;
         try {
           sessionId =
-              runnerService.newSession(buildVM.getInternalIp(), buildId);
+              runnerService.newSession(buildVM);
         } catch (Throwable t) {
           LOG.error("Couldn't start a new session", t);
           sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;

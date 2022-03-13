@@ -217,14 +217,14 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
-  public void createAndUpdateVM(BuildVM buildVM, int buildId) {
+  public void createAndUpdateVM(BuildVM buildVM) {
     transactionTemplate.executeWithoutResult(ts -> {
       int buildVMId = buildVMProvider.newBuildVM(buildVM);
       String sql = "UPDATE bt_build SET bt_build_vm_id = :bt_build_vm_id\n" +
           "WHERE bt_build_id = :bt_build_id";
       CommonUtil.validateSingleRowDbCommit(jdbc.update(sql, new SqlParamsBuilder()
           .withInteger("bt_build_vm_id", buildVMId)
-          .withInteger("bt_build_id", buildId).build()));
+          .withInteger("bt_build_id", buildVM.getBuildId()).build()));
     });
   }
   

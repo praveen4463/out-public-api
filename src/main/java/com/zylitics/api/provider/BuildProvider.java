@@ -17,7 +17,7 @@ public interface BuildProvider {
                                 int projectId,
                                 String insufficientTestsExMsg);
   
-  void createAndUpdateVM(BuildVM buildVM, int buildId);
+  void createAndUpdateVM(BuildVM buildVM);
   
   void updateSessionRequestStart(int buildId);
   
