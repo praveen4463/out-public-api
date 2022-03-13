@@ -1,6 +1,7 @@
 package com.zylitics.api.provider;
 
 import com.zylitics.api.model.IncomingFile;
+import com.zylitics.api.model.TestDetail;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -16,4 +17,6 @@ public interface TestProvider {
                             String insufficientTestsExMsg) throws IllegalArgumentException;
   
   void captureTests(@Nullable List<IncomingFile> incomingFiles, int projectId, int buildId);
+  
+  List<TestDetail> getAllCompletedTestDetail(int buildId);
 }

@@ -12,6 +12,8 @@ public class BuildRunConfig {
   
   private Boolean waitForCompletion;
   
+  private boolean includeDetailedResultInResponse;
+  
   private BuildCapability buildCapability;
   
   private BuildConfig buildConfig;
@@ -160,6 +162,15 @@ public class BuildRunConfig {
   
   public BuildRunConfig setWaitForCompletion(Boolean waitForCompletion) {
     this.waitForCompletion = waitForCompletion;
+    return this;
+  }
+  
+  public boolean isIncludeDetailedResultInResponse() {
+    return includeDetailedResultInResponse;
+  }
+  
+  public BuildRunConfig setIncludeDetailedResultInResponse(boolean includeDetailedResultInResponse) {
+    this.includeDetailedResultInResponse = includeDetailedResultInResponse;
     return this;
   }
   

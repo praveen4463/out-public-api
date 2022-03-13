@@ -1,6 +1,6 @@
 # https://github.com/GoogleContainerTools/jib/tree/master/jib-maven-plugin#system-properties
 - build docker image via jib:
-mvn -DskipTest=true compile jib:build
+kube
 or
 mvn -X -Djib.serialize=true -Djib.console=plain compile jib:build
 

@@ -1,5 +1,7 @@
 package com.zylitics.api.model;
 
+import java.util.List;
+
 public class NewBuildResponse {
   
   private int buildId;
@@ -7,6 +9,8 @@ public class NewBuildResponse {
   private String status;
   
   private String error;
+  
+  private List<TestDetail> testDetails;
   
   public int getBuildId() {
     return buildId;
@@ -32,6 +36,15 @@ public class NewBuildResponse {
   
   public NewBuildResponse setError(String error) {
     this.error = error;
+    return this;
+  }
+  
+  public List<TestDetail> getTestDetails() {
+    return testDetails;
+  }
+  
+  public NewBuildResponse setTestDetails(List<TestDetail> testDetails) {
+    this.testDetails = testDetails;
     return this;
   }
 }

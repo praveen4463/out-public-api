@@ -41,3 +41,19 @@ Bug fixes
 ### Bug fixes
 
 1. When shot preference not set, set it to `true`
+
+## v0.0.8
+
+Enhancements
+
+### Enhancements
+
+1. Added support for test detail in api response
+
+## v0.0.9
+
+Enhancements
+
+### Enhancements
+
+1. Renamed requireDetailedResultInResponse to includeDetailedResultInResponse
