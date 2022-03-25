@@ -1,4 +1,4 @@
-package com.zylitics.api.util;
+package com.zylitics.api.model;
 
 public class OSDescriptor {
   

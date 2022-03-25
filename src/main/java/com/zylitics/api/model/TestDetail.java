@@ -1,5 +1,7 @@
 package com.zylitics.api.model;
 
+import java.time.LocalDateTime;
+
 public class TestDetail {
   
   private String file;
@@ -9,6 +11,12 @@ public class TestDetail {
   private String version;
   
   private TestStatus status;
+  
+  private String error;
+  
+  private String urlUponError;
+  
+  private LocalDateTime endDate;
   
   public String getFile() {
     return file;
@@ -43,6 +51,33 @@ public class TestDetail {
   
   public TestDetail setStatus(TestStatus status) {
     this.status = status;
+    return this;
+  }
+  
+  public String getError() {
+    return error;
+  }
+  
+  public TestDetail setError(String error) {
+    this.error = error;
+    return this;
+  }
+  
+  public String getUrlUponError() {
+    return urlUponError;
+  }
+  
+  public TestDetail setUrlUponError(String urlUponError) {
+    this.urlUponError = urlUponError;
+    return this;
+  }
+  
+  public LocalDateTime getEndDate() {
+    return endDate;
+  }
+  
+  public TestDetail setEndDate(LocalDateTime endDate) {
+    this.endDate = endDate;
     return this;
   }
 }

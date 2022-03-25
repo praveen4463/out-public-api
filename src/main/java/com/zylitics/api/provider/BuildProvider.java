@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface BuildProvider {
   
-  Optional<Build> getBuild(int buildId);
+  List<Build> getBuilds(List<Integer> buildIds);
   
   int createNewBuild(NewBuild newBuild, int projectId);
   

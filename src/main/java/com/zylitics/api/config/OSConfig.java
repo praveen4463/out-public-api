@@ -1,6 +1,6 @@
 package com.zylitics.api.config;
 
-import com.zylitics.api.util.OSDescriptor;
+import com.zylitics.api.model.OSDescriptor;
 
 import java.util.*;
 

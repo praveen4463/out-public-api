@@ -46,6 +46,8 @@ public class Build {
   
   private int projectId;
   
+  private int organizationId;
+  
   private BuildSourceType sourceType;
   
   private long buildRequestId;
@@ -247,6 +249,15 @@ public class Build {
   
   public Build setProjectId(int projectId) {
     this.projectId = projectId;
+    return this;
+  }
+  
+  public int getOrganizationId() {
+    return organizationId;
+  }
+  
+  public Build setOrganizationId(int organizationId) {
+    this.organizationId = organizationId;
     return this;
   }
   

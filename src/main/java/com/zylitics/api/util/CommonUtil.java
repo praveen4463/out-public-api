@@ -50,6 +50,11 @@ public class CommonUtil {
     return val == null ? null : DateTimeUtil.utcTimeToEpochSecs(val);
   }
   
+  public static LocalDateTime getDateTimeOrNullFromSqlTimestamp(ResultSet rs, String field)
+      throws SQLException {
+    return DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp(field));
+  }
+  
   public static long getEpochSecsFromSqlTimestamp(ResultSet rs, String field)
       throws SQLException {
     return DateTimeUtil.utcTimeToEpochSecs(

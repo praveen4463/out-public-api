@@ -3,7 +3,6 @@ package com.zylitics.api.services;
 import com.zylitics.api.controllers.RunnerService;
 import com.zylitics.api.config.APICoreProperties;
 import com.zylitics.api.model.BuildVM;
-import com.zylitics.api.model.NewBuildVM;
 import com.zylitics.api.util.UrlChecker;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -14,7 +13,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ProductionRunnerService implements RunnerService {
   
@@ -38,7 +36,7 @@ public class ProductionRunnerService implements RunnerService {
         baseUrl + statusEndpoint);
     String buildsEndpoint = "/builds";
     // let exception throw when api returns error, we don't need to send that error to user.
-    return = webClient.post()
+    return webClient.post()
         .uri(baseUrl + buildsEndpoint)
         .contentType(MediaType.APPLICATION_JSON)
         .bodyValue(new NewSessionRequest().setBuildId(buildVM.getBuildId()))
@@ -76,7 +74,7 @@ public class ProductionRunnerService implements RunnerService {
     return VM_AVAILABILITY_TIMEOUT_MIN;
   }
   
-  private String buildBaseUrl(String runnerIP, APICoreProperties.Services servicesProps) {
+  protected String buildBaseUrl(String runnerIP, APICoreProperties.Services servicesProps) {
     return String.format("http://%s:%s/%s", runnerIP, servicesProps.getBtbrPort(),
         servicesProps.getBtbrVersion());
   }

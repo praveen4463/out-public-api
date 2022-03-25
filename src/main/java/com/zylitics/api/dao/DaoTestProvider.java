@@ -10,7 +10,6 @@ import com.zylitics.api.provider.TestProvider;
 import com.zylitics.api.util.CommonUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Repository;
 
 import javax.annotation.Nullable;
@@ -22,10 +21,8 @@ import java.util.stream.Collectors;
 @Repository
 public class DaoTestProvider extends AbstractDaoProvider implements TestProvider {
   
-  private static final String BUILD_ID_PARAM = ":bt_build_id";
-  
   private static final String TEST_Q_SELECT =
-      "SELECT " + BUILD_ID_PARAM + ", f.bt_file_id, f.name, t.bt_test_id, t.name,\n" +
+      "SELECT :bt_build_id, f.bt_file_id, f.name, t.bt_test_id, t.name,\n" +
       "v.bt_test_version_id, v.name, v.code,\n" +
       "(SELECT count(*) + 1 FROM (SELECT regexp_matches(v.code, '\\n', 'g')) t) code_lines\n";
   
@@ -58,20 +55,25 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     SqlParamsBuilder paramsBuilder = queryAndParams.y();
     int totalTests = jdbc.query("SELECT count(*)\n" + fromStm, paramsBuilder.build(),
         CommonUtil.getSingleInt()).get(0);
-    if (totalBuilds < totalTests) {
+    if (totalBuilds > totalTests) {
       throw new IllegalArgumentException(insufficientTestsExMsg);
     }
     int blockSize = Math.round((float) totalTests / totalBuilds);
     
     StringBuilder compositeSelect = new StringBuilder();
     for (int i = 0; i < totalBuilds; i++) {
-      String buildParam = BUILD_ID_PARAM + (i + 1);
-      String sql = TEST_Q_SELECT.replace(BUILD_ID_PARAM, buildParam) +
-          fromStm + "\n" +
-          "LIMIT " + blockSize + " OFFSET " + (i * blockSize) + "\n";
-      paramsBuilder.withInteger(buildParam, buildIds.get(i));
+      boolean notLast = i < totalBuilds - 1;
+      String sql = TEST_Q_SELECT.replace(":bt_build_id", ":bt_build_id" + (i + 1)) +
+          fromStm +
+          "ORDER BY f.name, t.name\n" + // ordering is important when using OFFSET
+          (notLast ? "LIMIT " + blockSize : "") + "\n" + // Allocate remaining tests for last build
+          "OFFSET " + (i * blockSize) + "\n";
+      paramsBuilder.withInteger("bt_build_id" + (i + 1), buildIds.get(i));
+      // Keep select statement in parentheses because the LIMIT and OFFSET operators can't be mixed with UNION
+      compositeSelect.append("(");
       compositeSelect.append(sql);
-      if (i < totalBuilds - 1) {
+      compositeSelect.append(")");
+      if (notLast) {
         compositeSelect.append("UNION ALL\n");
       }
     }
@@ -186,16 +188,21 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
   }
   
   @Override
-  public List<TestDetail> getAllCompletedTestDetail(int buildId) {
-    String sql = "SELECT bt_test_version_name, bt_file_name, bt_test_name, status\n" +
+  public List<TestDetail> getAllCompletedTestDetail(List<Integer> buildIds) {
+    String sql = "SELECT bt_test_version_name, bt_file_name, bt_test_name, status,\n" +
+        "error, url_upon_error, end_date AT TIME ZONE 'UTC' AS end_date\n" +
         "FROM bt_build_tests JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
-        "WHERE bt_build_id = :bt_build_id ORDER BY bt_build_tests_id";
+        "WHERE bt_build_id in (SELECT * FROM unnest(:build_ids)) ORDER BY bt_build_tests_id";
     return jdbc.query(sql,
-        new SqlParamsBuilder().withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+        new SqlParamsBuilder().withArray("build_ids", buildIds.toArray(), JDBCType.INTEGER)
+            .build(), (rs, rowNum) ->
             new TestDetail()
                 .setVersion(rs.getString("bt_test_version_name"))
                 .setStatus(CommonUtil.convertEnumFromSqlVal(rs, "status", TestStatus.class))
                 .setFile(rs.getString("bt_file_name"))
-                .setTest(rs.getString("bt_test_name")));
+                .setTest(rs.getString("bt_test_name"))
+                .setError(rs.getString("error"))
+                .setUrlUponError(rs.getString("url_upon_error"))
+                .setEndDate(CommonUtil.getDateTimeOrNullFromSqlTimestamp(rs, "end_date")));
   }
 }

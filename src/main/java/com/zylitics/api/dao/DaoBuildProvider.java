@@ -12,10 +12,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Nullable;
+import java.sql.JDBCType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Repository
 public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvider {
@@ -54,8 +54,8 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
-  public Optional<Build> getBuild(int buildId) {
-    String sql = "SELECT build_key, name, bt_build_vm_id, server_screen_size,\n" +
+  public List<Build> getBuilds(List<Integer> buildIds) {
+    String sql = "SELECT bt_build_id, build_key, bu.name, bt_build_vm_id, server_screen_size,\n" +
         "server_timezone_with_dst, session_key,\n" +
         "session_request_start_date AT TIME ZONE 'UTC' AS session_request_start_date,\n" +
         "session_request_end_date AT TIME ZONE 'UTC' AS session_request_end_date,\n" +
@@ -65,14 +65,15 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "all_done_date AT TIME ZONE 'UTC' AS all_done_date,\n" +
         "final_status, error, shot_bucket_session_storage, abort_on_failure,\n" +
         "aet_keep_single_window, aet_update_url_blank, aet_reset_timeouts,\n" +
-        "aet_delete_all_cookies, bt_project_id, source_type, bt_build_request_id,\n" +
-        "create_date AT TIME ZONE 'UTC' AS create_date\n" +
-        "FROM bt_build\n" +
-        "WHERE bt_build_id = :bt_build_id";
-    List<Build> builds = jdbc.query(sql, new SqlParamsBuilder()
-        .withInteger("bt_build_id", buildId).build(), (rs, rowNum) ->
+        "aet_delete_all_cookies, p.bt_project_id, organization_id,\n" +
+        "source_type, bt_build_request_id,\n" +
+        "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
+        "FROM bt_build bu JOIN bt_project p USING (bt_project_id)\n" +
+        "WHERE bt_build_id in (SELECT * FROM unnest(:build_ids))";
+    return jdbc.query(sql, new SqlParamsBuilder()
+        .withArray("build_ids", buildIds.toArray(), JDBCType.INTEGER).build(), (rs, rowNum) ->
         new Build()
-            .setBuildId(buildId)
+            .setBuildId(rs.getInt("bt_build_id"))
             .setBuildKey(rs.getString("build_key"))
             .setName(rs.getString("name"))
             .setBuildVMId(CommonUtil.getIntegerSqlVal(rs, "bt_build_vm_id"))
@@ -101,13 +102,10 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
             .setAetResetTimeouts(rs.getBoolean("aet_reset_timeouts"))
             .setAetDeleteAllCookies(rs.getBoolean("aet_delete_all_cookies"))
             .setProjectId(rs.getInt("bt_project_id"))
+            .setOrganizationId(rs.getInt("organization_id"))
             .setSourceType(BuildSourceType.valueOf(rs.getString("source_type")))
             .setBuildRequestId(rs.getLong("bt_build_request_id"))
             .setCreateDate(CommonUtil.getEpochSecsFromSqlTimestamp(rs, "create_date")));
-    if (builds.size() == 0) {
-      return Optional.empty();
-    }
-    return Optional.of(builds.get(0));
   }
   
   @Override

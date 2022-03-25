@@ -57,3 +57,10 @@ Enhancements
 ### Enhancements
 
 1. Renamed requireDetailedResultInResponse to includeDetailedResultInResponse
+
+## v0.1.0
+
+Enhancements
+
+1. Added parallel run capability.
+2. Increase proxy timeout to support longer builds.

@@ -18,5 +18,5 @@ public interface TestProvider {
   
   void captureTests(@Nullable List<IncomingFile> incomingFiles, int projectId, int buildId);
   
-  List<TestDetail> getAllCompletedTestDetail(int buildId);
+  List<TestDetail> getAllCompletedTestDetail(List<Integer> buildIds);
 }

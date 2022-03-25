@@ -7,6 +7,7 @@ import com.zylitics.api.model.BuildVM;
 import com.zylitics.api.model.NewBuildVM;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class LocalVMService implements VMService {
   
@@ -20,11 +21,15 @@ public class LocalVMService implements VMService {
   public BuildVM newBuildVM(NewBuildVM newBuildVM) {
     String localVm = System.getenv(apiCoreProperties.getServices().getLocalVmEnvVar());
     Preconditions.checkNotNull(localVm, "LocalVm env var is not set");
-    return new BuildVM().setName("local").setZone("local").setInternalIp(localVm);
+    return new BuildVM()
+        .setName("local")
+        .setZone("local")
+        .setInternalIp(localVm)
+        .setBuildId(newBuildVM.getBuildId());
   }
   
   @Override
   public List<BuildVM> newBuildVMs(List<NewBuildVM> newBuildVMs) {
-    throw new RuntimeException("Not implemented");
+    return newBuildVMs.stream().map(this::newBuildVM).collect(Collectors.toList());
   }
 }

@@ -6,10 +6,10 @@ import com.zylitics.api.config.OSConfig;
 import com.zylitics.api.dao.Common;
 import com.zylitics.api.exception.HttpRequestException;
 import com.zylitics.api.exception.UnauthorizedException;
-import com.zylitics.api.handlers.BuildCompletionEmailHandler;
+import com.zylitics.api.handlers.ParallelBuildCompletionEmailHandler;
 import com.zylitics.api.model.*;
 import com.zylitics.api.provider.*;
-import com.zylitics.api.util.OSDescriptor;
+import com.zylitics.api.model.OSDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -18,12 +18,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @RestController
@@ -60,7 +56,7 @@ public class BuildController extends AbstractController {
   
   private final RunnerService runnerService;
   
-  private BuildCompletionEmailHandler buildCompletionEmailHandler;
+  private final ParallelBuildCompletionEmailHandler parallelBuildCompletionEmailHandler;
   
   public BuildController(BuildProvider buildProvider,
                          BuildRequestProvider buildRequestProvider,
@@ -71,7 +67,7 @@ public class BuildController extends AbstractController {
                          APIDefaultsProvider apiDefaultsProvider,
                          TestProvider testProvider,
                          APICoreProperties apiCoreProperties,
-                         BuildCompletionEmailHandler buildCompletionEmailHandler,
+                         ParallelBuildCompletionEmailHandler parallelBuildCompletionEmailHandler,
                          Common common) {
     this.buildProvider = buildProvider;
     this.buildRequestProvider = buildRequestProvider;
@@ -82,31 +78,29 @@ public class BuildController extends AbstractController {
     this.apiDefaultsProvider = apiDefaultsProvider;
     this.testProvider = testProvider;
     this.apiCoreProperties = apiCoreProperties;
-    this.buildCompletionEmailHandler = buildCompletionEmailHandler;
+    this.parallelBuildCompletionEmailHandler = parallelBuildCompletionEmailHandler;
     this.common = common;
-  }
-  
-  private void notifyForParallelBuilds() {
-  
   }
   
   // !!This is a temporary way to enable parallel builds. A few things may not look right but that's
   // fine for now until we do it properly, later.
   private ResponseEntity<?> newParallelBuild(UserDetail userDetail,
-                                             BuildRunConfig config,
-                                             BuildConfig normalizedConfig,
+                                             BuildRunConfig buildRunConfig,
+                                             BuildConfig normalizedBuildConfig,
                                              int projectId) {
-    boolean notifyOnComplete = normalizedConfig.getNotifyOnCompletion();
-    int totalParallel = normalizedConfig.getTotalParallel();
+    boolean notifyOnComplete = normalizedBuildConfig.getNotifyOnCompletion();
+    int totalParallel = normalizedBuildConfig.getTotalParallel();
     BuildSourceType presetBuildSourceType = BuildSourceType.CI;
   
-    BuildCapability normalizedCap = deduceBuildCaps(config);
+    BuildCapability normalizedCap = deduceBuildCaps(buildRunConfig);
     // In all cases, we want the runner to not notify on completion because it will be handled
     // from this method, when enabled.
-    BuildConfig normalizedConfigForParallel = normalizedConfig.setNotifyOnCompletion(false);
+    BuildConfig normalizedParallelBuildConfig = normalizedBuildConfig.setNotifyOnCompletion(false);
     
     List<NewBuild> newBuilds = new ArrayList<>();
     List<Long> buildRequestIds = new ArrayList<>();
+    List<Integer> buildIds;
+    List<String> sessionIds;
     
     try {
       // Check for quota in the beginning and bail out if problems found.
@@ -115,7 +109,7 @@ public class BuildController extends AbstractController {
       for (int i = 0; i < totalParallel; i++) {
         NewBuild newBuild = new NewBuild();
         //  Add a PartN suffix to build name to easily identify build parts
-        newBuild.setBuildName(config.getBuildName() + " - Part" + (i + 1));
+        newBuild.setBuildName(buildRunConfig.getBuildName() + " - Part" + (i + 1));
         // Always set the source to something that makes runner sending a response only after build is
         // completed. This is done so that this api method can trigger post build completion steps
         // such as sending a composite email.
@@ -127,20 +121,19 @@ public class BuildController extends AbstractController {
         // particular user.
         newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
         newBuild.setBuildCapability(normalizedCap);
-        newBuild.setBuildConfig(normalizedConfigForParallel);
+        newBuild.setBuildConfig(normalizedParallelBuildConfig);
     
         // create 1 build request for every build and don't use the totalParallel field because
         // build.buildRequestId is unique.
-        long buildRequestId = getNewBuildRequest(1,
-            newBuild.getSourceType(), userDetail.getUserId());
+        long buildRequestId = getNewBuildRequest(newBuild.getSourceType(), userDetail.getUserId());
         newBuild.setBuildRequestId(buildRequestId);
     
         buildRequestIds.add(buildRequestId);
         newBuilds.add(newBuild);
       }
       
-      List<Integer> buildIds = buildProvider.createNewBuilds(newBuilds,
-          config.getFiles(),
+      buildIds = buildProvider.createNewBuilds(newBuilds,
+          buildRunConfig.getFiles(),
           projectId,
           "There are lesser tests in given project than the specified number of parallels." +
               "Number of tests must be equal to or greater than the given parallel number.");
@@ -152,11 +145,12 @@ public class BuildController extends AbstractController {
         NewBuildVM newBuildVM = new NewBuildVM()
             .setBuildId(buildId)
             .setRequireRunningVM(false)
-            .setDisplayResolution(normalizedConfigForParallel.getDisplayResolution())
-            .setTimezone(normalizedConfigForParallel.getTimezone())
+            .setDisplayResolution(normalizedParallelBuildConfig.getDisplayResolution())
+            .setTimezone(normalizedParallelBuildConfig.getTimezone())
             .setBrowserName(normalizedCap.getBrowser())
             .setBrowserVersion(normalizedCap.getBrowserVersion())
             .setOs(normalizedCap.getOs());
+        newBuildVMS.add(newBuildVM);
       });
   
       SessionFailureReason sessionFailureReason = null;
@@ -165,33 +159,24 @@ public class BuildController extends AbstractController {
         try {
           buildVMS = vmService.newBuildVMs(newBuildVMS);
         } catch (Throwable t) {
-          LOG.error("Couldn't create buildVMs", t);
+          // TODO: In case of partial failure, some VMs will remain dangling and will need to be
+          //  deleted either from here or manually. Keep an eye on logs and see what can be done.
+          LOG.error("Couldn't create parallel buildVMs", t);
           sessionFailureReason = SessionFailureReason.VM_NOT_CREATED;
           throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, VM_NOT_CREATED_ERROR);
         }
         buildVMS.forEach(buildProvider::createAndUpdateVM);
-        List<String> sessionIds;
+        
         try {
           sessionIds = runnerService.newSessions(buildVMS);
         } catch (Throwable t) {
-          LOG.error("Couldn't start a new session", t);
+          // TODO: In case of partial failure, some builds will be running while some other won't.
+          //  We need to detect a failure and send a STOP to running builds.
+          //  Keep an eye on logs and see when will we have to do this part.
+          LOG.error("Couldn't start new parallel sessions", t);
           sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
           throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, NEW_SESSION_ERROR);
         }
-        
-        IntStream.range(0, sessionIds.size())
-            .forEach(i -> buildProvider.updateSession(sessionIds.get(i), buildIds.get(i)));
-        
-        // All builds done, perform completion steps.
-        if (notifyOnComplete) {
-          notifyForParallelBuilds();
-        }
-  
-        NewBuildResponse res = new NewBuildResponse().setBuildId(buildId);
-        Build build = buildProvider.getBuild(buildId)
-            .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
-        res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
-        return ResponseEntity.ok(res);
       } catch (Throwable t) {
         // updates session_request_end_date
         for (int buildId : buildIds) {
@@ -210,19 +195,51 @@ public class BuildController extends AbstractController {
         HttpRequestException httpRequestException = (HttpRequestException) t;
         return sendError(httpRequestException.getStatus(), httpRequestException.getMessage());
       }
+      throw t;
     }
-    return null;
+    // All builds done, perform completion steps.
+    IntStream.range(0, sessionIds.size())
+        .forEach(i -> buildProvider.updateSession(sessionIds.get(i), buildIds.get(i)));
+    
+    List<Build> builds = buildProvider.getBuilds(buildIds);
+    if (builds.size() == 0) {
+      throw new RuntimeException("Couldn't fetch builds " + buildIds);
+    }
+  
+    NewParallelBuildResponse res = new NewParallelBuildResponse().setBuildIds(buildIds);
+    
+    boolean isSuccess = builds.stream().
+        allMatch(build -> build.getFinalStatus() == TestStatus.SUCCESS);
+    
+    TestStatus responseStatus = isSuccess ? TestStatus.SUCCESS : TestStatus.ERROR;
+    res.setStatus(responseStatus.toString().toLowerCase(Locale.US));
+  
+    if (!(notifyOnComplete || buildRunConfig.isIncludeDetailedResultInResponse())) {
+      return ResponseEntity.ok(res);
+    }
+    
+    List<TestDetail> testDetails = testProvider.getAllCompletedTestDetail(buildIds);
+  
+    if (buildRunConfig.isIncludeDetailedResultInResponse()) {
+      res.setTestDetails(testDetails);
+    }
+    
+    if (notifyOnComplete) {
+      parallelBuildCompletionEmailHandler.handle(buildRunConfig, builds, isSuccess, testDetails);
+    }
+    
+    return ResponseEntity.ok(res);
   }
   
   @PostMapping("/projects/{projectId}/builds")
   @SuppressWarnings("unused")
   public ResponseEntity<?> newBuild(
-      @Validated @RequestBody(required = false) BuildRunConfig config,
+      @Validated @RequestBody(required = false) BuildRunConfig buildRunConfig,
       @PathVariable @Min(1) int projectId,
       @RequestHeader(API_KEY_REQ_HEADER) String apiKey
   ) {
-    if (config == null) {
-      config = new BuildRunConfig();
+    if (buildRunConfig == null) {
+      buildRunConfig = new BuildRunConfig();
     }
     UserDetail userDetail = common.verifyOrganizationProjectAndGetUserDetail(apiKey, projectId)
         .orElseThrow(() -> new UnauthorizedException("Either the API key is invalid or given" +
@@ -230,15 +247,15 @@ public class BuildController extends AbstractController {
     
     APIDefaults apiDefaults = apiDefaultsProvider.getApiDefaults(userDetail.getOrganizationId())
         .orElse(new APIDefaults());
-    BuildConfig normalizedConfig = deduceBuildConfig(config, apiDefaults);
+    BuildConfig normalizedBuildConfig = deduceBuildConfig(buildRunConfig, apiDefaults);
     
-    if (normalizedConfig.getTotalParallel() > 1) {
-      return newParallelBuild(userDetail, config, normalizedConfig, projectId);
+    if (normalizedBuildConfig.getTotalParallel() > 1) {
+      return newParallelBuild(userDetail, buildRunConfig, normalizedBuildConfig, projectId);
     }
     
     NewBuild newBuild = new NewBuild();
-    newBuild.setBuildName(config.getBuildName());
-    if (config.getWaitForCompletion() == null || config.getWaitForCompletion()) {
+    newBuild.setBuildName(buildRunConfig.getBuildName());
+    if (buildRunConfig.getWaitForCompletion() == null || buildRunConfig.getWaitForCompletion()) {
       newBuild.setSourceType(BuildSourceType.CI);
     } else {
       newBuild.setSourceType(BuildSourceType.NOT_IDE);
@@ -246,12 +263,11 @@ public class BuildController extends AbstractController {
     // Same bucket for all as this api is accessed org wide, and we don't want to set it to a
     // particular user.
     newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
-    newBuild.setFiles(config.getFiles());
-    newBuild.setBuildCapability(deduceBuildCaps(config));
-    newBuild.setBuildConfig(normalizedConfig);
+    newBuild.setFiles(buildRunConfig.getFiles());
+    newBuild.setBuildCapability(deduceBuildCaps(buildRunConfig));
+    newBuild.setBuildConfig(normalizedBuildConfig);
     
-    long buildRequestId = getNewBuildRequest(normalizedConfig.getTotalParallel(),
-        newBuild.getSourceType(), userDetail.getUserId());
+    long buildRequestId = getNewBuildRequest(newBuild.getSourceType(), userDetail.getUserId());
     newBuild.setBuildRequestId(buildRequestId);
     try {
       int buildId = checkQuotaAndCreateNewBuild(newBuild, projectId, userDetail.getUserId());
@@ -279,8 +295,7 @@ public class BuildController extends AbstractController {
         // start new session as we've a VM
         String sessionId;
         try {
-          sessionId =
-              runnerService.newSession(buildVM);
+          sessionId = runnerService.newSession(buildVM);
         } catch (Throwable t) {
           LOG.error("Couldn't start a new session", t);
           sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
@@ -291,12 +306,16 @@ public class BuildController extends AbstractController {
         
         NewBuildResponse res = new NewBuildResponse().setBuildId(buildId);
         if (newBuild.getSourceType() == BuildSourceType.CI) {
-          Build build = buildProvider.getBuild(buildId)
-              .orElseThrow(() -> new RuntimeException("Couldn't fetch build " + buildId));
+          List<Build> builds = buildProvider.getBuilds(Collections.singletonList(buildId));
+          if (builds.size() == 0) {
+            throw new RuntimeException("Couldn't fetch build " + buildId);
+          }
+          Build build = builds.get(0);
           res.setStatus(build.getFinalStatus().toString().toLowerCase(Locale.US));
           res.setError(build.getError());
-          if (config.isIncludeDetailedResultInResponse()) {
-            res.setTestDetails(testProvider.getAllCompletedTestDetail(buildId));
+          if (buildRunConfig.isIncludeDetailedResultInResponse()) {
+            res.setTestDetails(testProvider.getAllCompletedTestDetail(
+                Collections.singletonList(buildId)));
           }
         } else {
           res.setStatus(TestStatus.RUNNING.toString().toLowerCase(Locale.US));
@@ -400,9 +419,9 @@ public class BuildController extends AbstractController {
         .setBuildVars(configBConf.getBuildVars());
   }
   
-  private long getNewBuildRequest(int totalParallel, BuildSourceType sourceType, int userId) {
+  private long getNewBuildRequest(BuildSourceType sourceType, int userId) {
     return buildRequestProvider.newBuildRequest(new BuildRequest()
-        .setTotalParallel(totalParallel)
+        .setTotalParallel(1)
         .setBuildSourceType(sourceType).setUserId(userId));
   }
   
