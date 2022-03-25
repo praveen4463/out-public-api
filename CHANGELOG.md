@@ -64,3 +64,9 @@ Enhancements
 
 1. Added parallel run capability.
 2. Increase proxy timeout to support longer builds.
+
+## v0.1.1
+
+### Bug fixes
+
+1. Fixed the date format in emails and applied a timezone for EST rather than an offset.

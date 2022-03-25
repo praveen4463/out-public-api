@@ -12,10 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Component
@@ -108,8 +109,9 @@ public class ParallelBuildCompletionEmailHandler {
       if (testDetail.getStatus() == TestStatus.ERROR) {
         // !!For timestamp, we'll convert it to EST for now for all emails.
         // TODO: later put a pref record in db for timezone and convert to that one.
-        String failedAt = testDetail.getEndDate().minusHours(5)
-            .format(DateTimeFormatter.ofPattern("MMM d, h:m:s a")) + " EST";
+        String failedAt = ZonedDateTime.of(testDetail.getEndDate(), ZoneId.of("UTC"))
+            .withZoneSameInstant(ZoneId.of("America/Montreal"))
+            .format(DateTimeFormatter.ofPattern("MMM d, h:mm:ss a")) + " EST";
         error.append(
             String.format("<p class=\"test-name\">%s > %s</p>" +
                     "<p class=\"error-detail\">Failed at: %s</p>" +
