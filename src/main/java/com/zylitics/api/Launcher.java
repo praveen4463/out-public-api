@@ -114,7 +114,7 @@ public class Launcher {
     String btbrUserAuthHeader = Base64.getEncoder().encodeToString((services.getBtbrAuthUser()
         + ":" + secret).getBytes());
     HttpClient httpClient = HttpClient.create()
-        .responseTimeout(Duration.ofMinutes(600)); // 10h of timeout for now
+        .responseTimeout(Duration.ofMinutes(5));
     WebClient webClient = webClientBuilder
         .clientConnector(new ReactorClientHttpConnector(httpClient))
         .defaultHeader("Authorization", btbrUserAuthHeader)
@@ -130,8 +130,10 @@ public class Launcher {
     if (localBtbrAutSecret == null) {
       localBtbrAutSecret = "local";
     }
+    HttpClient httpClient = HttpClient.create()
+        .responseTimeout(Duration.ofMinutes(2));
     WebClient webClient = webClientBuilder
-        .clientConnector(new ReactorClientHttpConnector(HttpClient.create()))
+        .clientConnector(new ReactorClientHttpConnector(httpClient))
         .defaultHeader("Authorization", localBtbrAutSecret)
         .build();
     return new LocalRunnerService(apiCoreProperties, webClient);

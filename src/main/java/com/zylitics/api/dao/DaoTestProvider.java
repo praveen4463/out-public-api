@@ -58,7 +58,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     if (totalBuilds > totalTests) {
       throw new IllegalArgumentException(insufficientTestsExMsg);
     }
-    int blockSize = Math.round((float) totalTests / totalBuilds);
+    int blockSize = Math.floorDiv(totalTests, totalBuilds);
     
     StringBuilder compositeSelect = new StringBuilder();
     for (int i = 0; i < totalBuilds; i++) {

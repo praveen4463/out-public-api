@@ -18,6 +18,10 @@ public class CommonUtil {
     return ((rs, rowNum) -> rs.getInt(1));
   }
   
+  public static RowMapper<Boolean> getSingleBoolean() {
+    return ((rs, rowNum) -> rs.getBoolean(1));
+  }
+  
   public static RowMapper<Long> getSingleLong() {
     return ((rs, rowNum) -> rs.getLong(1));
   }

@@ -70,3 +70,10 @@ Enhancements
 ### Bug fixes
 
 1. Fixed the date format in emails and applied a timezone for EST rather than an offset.
+
+## v0.1.2
+
+### Bug fixes
+
+1. Pooling to know the status of a build rather than depending on keep-alive connection.
+2. Fixed the test split bug

@@ -54,6 +54,15 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
   }
   
   @Override
+  public boolean haveBuildsCompleted(List<Integer> buildIds) {
+    String sql = "SELECT bool_and(CASE WHEN all_done_date is not null THEN true ELSE false END)\n" +
+        "FROM bt_build WHERE bt_build_id in (SELECT * FROM unnest(:build_ids))";
+    return jdbc.query(sql,
+        new SqlParamsBuilder().withArray("build_ids", buildIds.toArray(), JDBCType.INTEGER).build(),
+        CommonUtil.getSingleBoolean()).get(0);
+  }
+  
+  @Override
   public List<Build> getBuilds(List<Integer> buildIds) {
     String sql = "SELECT bt_build_id, build_key, bu.name, bt_build_vm_id, server_screen_size,\n" +
         "server_timezone_with_dst, session_key,\n" +

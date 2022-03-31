@@ -10,6 +10,8 @@ public interface BuildProvider {
   
   List<Build> getBuilds(List<Integer> buildIds);
   
+  boolean haveBuildsCompleted(List<Integer> buildIds);
+  
   int createNewBuild(NewBuild newBuild, int projectId);
   
   List<Integer> createNewBuilds(List<NewBuild> newBuilds,

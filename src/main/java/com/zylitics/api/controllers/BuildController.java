@@ -10,6 +10,7 @@ import com.zylitics.api.handlers.ParallelBuildCompletionEmailHandler;
 import com.zylitics.api.model.*;
 import com.zylitics.api.provider.*;
 import com.zylitics.api.model.OSDescriptor;
+import com.zylitics.api.services.BuildCompletionCheckerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -56,12 +57,15 @@ public class BuildController extends AbstractController {
   
   private final RunnerService runnerService;
   
+  private final BuildCompletionCheckerService buildCompletionCheckerService;
+  
   private final ParallelBuildCompletionEmailHandler parallelBuildCompletionEmailHandler;
   
   public BuildController(BuildProvider buildProvider,
                          BuildRequestProvider buildRequestProvider,
                          VMService vmService,
                          RunnerService runnerService,
+                         BuildCompletionCheckerService buildCompletionCheckerService,
                          UserPlanProvider userPlanProvider,
                          BrowserProvider browserProvider,
                          APIDefaultsProvider apiDefaultsProvider,
@@ -73,6 +77,7 @@ public class BuildController extends AbstractController {
     this.buildRequestProvider = buildRequestProvider;
     this.vmService = vmService;
     this.runnerService = runnerService;
+    this.buildCompletionCheckerService = buildCompletionCheckerService;
     this.userPlanProvider = userPlanProvider;
     this.browserProvider = browserProvider;
     this.apiDefaultsProvider = apiDefaultsProvider;
@@ -90,12 +95,13 @@ public class BuildController extends AbstractController {
                                              int projectId) {
     boolean notifyOnComplete = normalizedBuildConfig.getNotifyOnCompletion();
     int totalParallel = normalizedBuildConfig.getTotalParallel();
-    BuildSourceType presetBuildSourceType = BuildSourceType.CI;
   
     BuildCapability normalizedCap = deduceBuildCaps(buildRunConfig);
     // In all cases, we want the runner to not notify on completion because it will be handled
     // from this method, when enabled.
     BuildConfig normalizedParallelBuildConfig = normalizedBuildConfig.setNotifyOnCompletion(false);
+    boolean waitForCompletion = buildRunConfig.getWaitForCompletion() == null ||
+        buildRunConfig.getWaitForCompletion();
     
     List<NewBuild> newBuilds = new ArrayList<>();
     List<Long> buildRequestIds = new ArrayList<>();
@@ -110,13 +116,8 @@ public class BuildController extends AbstractController {
         NewBuild newBuild = new NewBuild();
         //  Add a PartN suffix to build name to easily identify build parts
         newBuild.setBuildName(buildRunConfig.getBuildName() + " - Part" + (i + 1));
-        // Always set the source to something that makes runner sending a response only after build is
-        // completed. This is done so that this api method can trigger post build completion steps
-        // such as sending a composite email.
-        // !! This will ignore 'waitForCompletion' settings for now. If we respect this setting and
-        // still want to perform completion steps, we will have to poll the db/runner until the completion,
-        // but I'm avoiding that complication for now.
-        newBuild.setSourceType(presetBuildSourceType);
+        // Always let the runner return after session created because we will poll the completion here.
+        newBuild.setSourceType(BuildSourceType.NOT_IDE);
         // Same bucket for all as this api is accessed org wide, and we don't want to set it to a
         // particular user.
         newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
@@ -197,37 +198,45 @@ public class BuildController extends AbstractController {
       }
       throw t;
     }
-    // All builds done, perform completion steps.
+
     IntStream.range(0, sessionIds.size())
         .forEach(i -> buildProvider.updateSession(sessionIds.get(i), buildIds.get(i)));
-    
-    List<Build> builds = buildProvider.getBuilds(buildIds);
-    if (builds.size() == 0) {
-      throw new RuntimeException("Couldn't fetch builds " + buildIds);
-    }
   
     NewParallelBuildResponse res = new NewParallelBuildResponse().setBuildIds(buildIds);
     
-    boolean isSuccess = builds.stream().
-        allMatch(build -> build.getFinalStatus() == TestStatus.SUCCESS);
-    
-    TestStatus responseStatus = isSuccess ? TestStatus.SUCCESS : TestStatus.ERROR;
-    res.setStatus(responseStatus.toString().toLowerCase(Locale.US));
+    if (notifyOnComplete ||
+        buildRunConfig.isIncludeDetailedResultInResponse() ||
+        waitForCompletion) {
+      buildCompletionCheckerService.wait(buildIds);
+      
+      List<Build> builds = buildProvider.getBuilds(buildIds);
+      if (builds.size() == 0) {
+        throw new RuntimeException("Couldn't fetch builds " + buildIds);
+      }
   
-    if (!(notifyOnComplete || buildRunConfig.isIncludeDetailedResultInResponse())) {
-      return ResponseEntity.ok(res);
-    }
-    
-    List<TestDetail> testDetails = testProvider.getAllCompletedTestDetail(buildIds);
+      boolean isSuccess = builds.stream().
+          allMatch(build -> build.getFinalStatus() == TestStatus.SUCCESS);
   
-    if (buildRunConfig.isIncludeDetailedResultInResponse()) {
-      res.setTestDetails(testDetails);
+      TestStatus responseStatus = isSuccess ? TestStatus.SUCCESS : TestStatus.ERROR;
+      res.setStatus(responseStatus.toString().toLowerCase(Locale.US));
+  
+      if (!(notifyOnComplete || buildRunConfig.isIncludeDetailedResultInResponse())) {
+        return ResponseEntity.ok(res);
+      }
+  
+      List<TestDetail> testDetails = testProvider.getAllCompletedTestDetail(buildIds);
+  
+      if (buildRunConfig.isIncludeDetailedResultInResponse()) {
+        res.setTestDetails(testDetails);
+      }
+  
+      if (notifyOnComplete) {
+        parallelBuildCompletionEmailHandler.handle(buildRunConfig, builds, isSuccess, testDetails);
+      }
+    } else {
+      res.setStatus(TestStatus.RUNNING.toString().toLowerCase(Locale.US));
     }
-    
-    if (notifyOnComplete) {
-      parallelBuildCompletionEmailHandler.handle(buildRunConfig, builds, isSuccess, testDetails);
-    }
-    
+  
     return ResponseEntity.ok(res);
   }
   
@@ -252,14 +261,14 @@ public class BuildController extends AbstractController {
     if (normalizedBuildConfig.getTotalParallel() > 1) {
       return newParallelBuild(userDetail, buildRunConfig, normalizedBuildConfig, projectId);
     }
+  
+    boolean waitForCompletion = buildRunConfig.getWaitForCompletion() == null ||
+        buildRunConfig.getWaitForCompletion();
     
     NewBuild newBuild = new NewBuild();
     newBuild.setBuildName(buildRunConfig.getBuildName());
-    if (buildRunConfig.getWaitForCompletion() == null || buildRunConfig.getWaitForCompletion()) {
-      newBuild.setSourceType(BuildSourceType.CI);
-    } else {
-      newBuild.setSourceType(BuildSourceType.NOT_IDE);
-    }
+    // Always let the runner return after session created because we will poll the completion here.
+    newBuild.setSourceType(BuildSourceType.NOT_IDE);
     // Same bucket for all as this api is accessed org wide, and we don't want to set it to a
     // particular user.
     newBuild.setShotBucket(apiCoreProperties.getStorage().getShotBucketUsc());
@@ -301,11 +310,14 @@ public class BuildController extends AbstractController {
           sessionFailureReason = SessionFailureReason.NEW_SESSION_ERROR;
           throw new HttpRequestException(HttpStatus.INTERNAL_SERVER_ERROR, NEW_SESSION_ERROR);
         }
+        
         // updates session_request_end_date
         buildProvider.updateSession(sessionId, buildId);
         
         NewBuildResponse res = new NewBuildResponse().setBuildId(buildId);
-        if (newBuild.getSourceType() == BuildSourceType.CI) {
+        if (buildRunConfig.isIncludeDetailedResultInResponse() || waitForCompletion) {
+          buildCompletionCheckerService.wait(Collections.singletonList(buildId));
+          
           List<Build> builds = buildProvider.getBuilds(Collections.singletonList(buildId));
           if (builds.size() == 0) {
             throw new RuntimeException("Couldn't fetch build " + buildId);
