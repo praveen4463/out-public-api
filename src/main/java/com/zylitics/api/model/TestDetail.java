@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 public class TestDetail {
   
+  private int buildId;
+  
   private String file;
   
   private String test;
@@ -17,6 +19,15 @@ public class TestDetail {
   private String urlUponError;
   
   private LocalDateTime endDate;
+  
+  public int getBuildId() {
+    return buildId;
+  }
+  
+  public TestDetail setBuildId(int buildId) {
+    this.buildId = buildId;
+    return this;
+  }
   
   public String getFile() {
     return file;

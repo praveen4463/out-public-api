@@ -189,7 +189,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
   
   @Override
   public List<TestDetail> getAllCompletedTestDetail(List<Integer> buildIds) {
-    String sql = "SELECT bt_test_version_name, bt_file_name, bt_test_name, status,\n" +
+    String sql = "SELECT bt_build_id, bt_test_version_name, bt_file_name, bt_test_name, status,\n" +
         "error, url_upon_error, end_date AT TIME ZONE 'UTC' AS end_date\n" +
         "FROM bt_build_tests JOIN bt_build_status USING (bt_build_id, bt_test_version_id)\n" +
         "WHERE bt_build_id in (SELECT * FROM unnest(:build_ids)) ORDER BY bt_build_tests_id";
@@ -197,6 +197,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
         new SqlParamsBuilder().withArray("build_ids", buildIds.toArray(), JDBCType.INTEGER)
             .build(), (rs, rowNum) ->
             new TestDetail()
+                .setBuildId(rs.getInt("bt_build_id"))
                 .setVersion(rs.getString("bt_test_version_name"))
                 .setStatus(CommonUtil.convertEnumFromSqlVal(rs, "status", TestStatus.class))
                 .setFile(rs.getString("bt_file_name"))

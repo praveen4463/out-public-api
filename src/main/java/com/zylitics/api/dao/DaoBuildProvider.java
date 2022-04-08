@@ -78,7 +78,7 @@ public class DaoBuildProvider extends AbstractDaoProvider implements BuildProvid
         "source_type, bt_build_request_id,\n" +
         "bu.create_date AT TIME ZONE 'UTC' AS create_date\n" +
         "FROM bt_build bu JOIN bt_project p USING (bt_project_id)\n" +
-        "WHERE bt_build_id in (SELECT * FROM unnest(:build_ids))";
+        "WHERE bt_build_id in (SELECT * FROM unnest(:build_ids)) ORDER BY bt_build_id";
     return jdbc.query(sql, new SqlParamsBuilder()
         .withArray("build_ids", buildIds.toArray(), JDBCType.INTEGER).build(), (rs, rowNum) ->
         new Build()

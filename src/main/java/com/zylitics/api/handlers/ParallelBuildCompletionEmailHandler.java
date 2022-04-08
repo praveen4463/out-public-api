@@ -8,10 +8,12 @@ import com.zylitics.api.model.*;
 import com.zylitics.api.provider.EmailPreferenceProvider;
 import com.zylitics.api.services.EmailService;
 import com.zylitics.api.services.SendTemplatedEmail;
+import com.zylitics.api.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -39,10 +41,29 @@ public class ParallelBuildCompletionEmailHandler {
     this.emailPreferenceProvider = emailPreferenceProvider;
   }
   
+  private String getLinkToBuild(Build build) {
+    APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
+    
+    String linkToBuild = String.format("%s/%s?project=%s&simple_view=1",
+        apiCoreProperties.getFrontEndBaseUrl() + emailProps.getBuildsPage(),
+        build.getBuildId(),
+        build.getProjectId());
+    return String.format("<a href=\"%s\" target=\"_blank\">%s</a>",
+        linkToBuild,
+        build.getName());
+  }
+  
+  private String utcLocalDateToEmailDate(LocalDateTime utcDate) {
+    return ZonedDateTime.of(utcDate, CommonUtil.getUTCZoneId())
+        .withZoneSameInstant(ZoneId.of("America/Montreal"))
+        .format(DateTimeFormatter.ofPattern("MMM d, h:mm:ss a")) + " EST";
+  }
+  
   public void handle(BuildRunConfig config,
                      List<Build> builds,
                      boolean allSucceeded,
-                     List<TestDetail> testDetails) {
+                     List<TestDetail> testDetails,
+                     LocalDateTime start) {
     APICoreProperties.Email emailProps = apiCoreProperties.getEmail();
     
     Build firstBuild = builds.get(0);
@@ -80,18 +101,12 @@ public class ParallelBuildCompletionEmailHandler {
     StringBuilder parallelBuildParts = new StringBuilder();
     
     for (Build build : builds) {
-      String linkToBuild = String.format("%s/%s?project=%s&simple_view=1",
-          apiCoreProperties.getFrontEndBaseUrl() + emailProps.getBuildsPage(),
-          build.getBuildId(),
-          build.getProjectId());
-      
       parallelBuildParts.append(
           String.format("<p class=\"build-part\">" +
-                  "<a href=\"%s\" target=\"_blank\">%s</a>" +
+                  "%s" +
                   (!allSucceeded ? "<span class=\"%s\">%s</span>" : "") + // No need to show status with builds when all succeeded
                   "</p>",
-              linkToBuild,
-              build.getName(),
+              getLinkToBuild(build),
               build.getFinalStatus() == TestStatus.SUCCESS ? "success" : "failure",
               build.getFinalStatus() == TestStatus.SUCCESS ? "passed" : "failed")
       );
@@ -109,16 +124,18 @@ public class ParallelBuildCompletionEmailHandler {
       if (testDetail.getStatus() == TestStatus.ERROR) {
         // !!For timestamp, we'll convert it to EST for now for all emails.
         // TODO: later put a pref record in db for timezone and convert to that one.
-        String failedAt = ZonedDateTime.of(testDetail.getEndDate(), ZoneId.of("UTC"))
-            .withZoneSameInstant(ZoneId.of("America/Montreal"))
-            .format(DateTimeFormatter.ofPattern("MMM d, h:mm:ss a")) + " EST";
+        String failedAt = utcLocalDateToEmailDate(testDetail.getEndDate());
         error.append(
             String.format("<p class=\"test-name\">%s > %s</p>" +
                     "<p class=\"error-detail\">Failed at: %s</p>" +
+                    "<p class=\"error-detail\">Build part: %s</p>" +
                     "<pre><div class=\"error\">%s</div></pre>",
                 testDetail.getFile(),
                 testDetail.getTest(),
                 failedAt,
+                getLinkToBuild(builds.stream()
+                    .filter(b -> b.getBuildId() == testDetail.getBuildId())
+                    .findFirst().orElseThrow(RuntimeException::new)),
                 testDetail.getError())
         );
         totalFailed++;
@@ -131,6 +148,9 @@ public class ParallelBuildCompletionEmailHandler {
     templateDataBuilder.put("build_identifier", buildIdentifier);
     templateDataBuilder.put("build_parts", parallelBuildParts);
     templateDataBuilder.put("link_to_emails_settings_def_proj", linkToEmailSettings);
+    templateDataBuilder.put("start_date", utcLocalDateToEmailDate(start));
+    templateDataBuilder.put("end_date",
+        utcLocalDateToEmailDate(LocalDateTime.now(CommonUtil.getUTCZoneId())));
     templateDataBuilder.put("passed", totalPassed);
     templateDataBuilder.put("failed", totalFailed);
     templateDataBuilder.put("error", error);

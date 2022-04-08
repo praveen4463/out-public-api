@@ -5,6 +5,7 @@ import org.springframework.jdbc.core.RowMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 public class CommonUtil {
   
@@ -63,5 +64,9 @@ public class CommonUtil {
       throws SQLException {
     return DateTimeUtil.utcTimeToEpochSecs(
         DateTimeUtil.sqlTimestampToLocal(rs.getTimestamp(field)));
+  }
+  
+  public static ZoneId getUTCZoneId() {
+    return ZoneId.of("UTC");
   }
 }

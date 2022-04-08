@@ -11,6 +11,7 @@ import com.zylitics.api.model.*;
 import com.zylitics.api.provider.*;
 import com.zylitics.api.model.OSDescriptor;
 import com.zylitics.api.services.BuildCompletionCheckerService;
+import com.zylitics.api.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.Min;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -95,6 +97,7 @@ public class BuildController extends AbstractController {
                                              int projectId) {
     boolean notifyOnComplete = normalizedBuildConfig.getNotifyOnCompletion();
     int totalParallel = normalizedBuildConfig.getTotalParallel();
+    LocalDateTime start = LocalDateTime.now(CommonUtil.getUTCZoneId());
   
     BuildCapability normalizedCap = deduceBuildCaps(buildRunConfig);
     // In all cases, we want the runner to not notify on completion because it will be handled
@@ -231,7 +234,8 @@ public class BuildController extends AbstractController {
       }
   
       if (notifyOnComplete) {
-        parallelBuildCompletionEmailHandler.handle(buildRunConfig, builds, isSuccess, testDetails);
+        parallelBuildCompletionEmailHandler.handle(buildRunConfig, builds, isSuccess, testDetails,
+            start);
       }
     } else {
       res.setStatus(TestStatus.RUNNING.toString().toLowerCase(Locale.US));

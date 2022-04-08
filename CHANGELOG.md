@@ -77,3 +77,14 @@ Enhancements
 
 1. Pooling to know the status of a build rather than depending on keep-alive connection.
 2. Fixed the test split bug
+
+## v0.1.3
+
+### Enhancements
+
+1. Added build part link to errors.
+2. Added start and end date.
+
+### Bug fixes
+
+1. Fixed build ordering bug in build parts.
