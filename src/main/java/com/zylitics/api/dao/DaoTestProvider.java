@@ -21,11 +21,6 @@ import java.util.stream.Collectors;
 @Repository
 public class DaoTestProvider extends AbstractDaoProvider implements TestProvider {
   
-  private static final String TEST_Q_SELECT =
-      "SELECT :bt_build_id, f.bt_file_id, f.name, t.bt_test_id, t.name,\n" +
-      "v.bt_test_version_id, v.name, v.code,\n" +
-      "(SELECT count(*) + 1 FROM (SELECT regexp_matches(v.code, '\\n', 'g')) t) code_lines\n";
-  
   private static final String TEST_Q_INSERT =
       "INSERT INTO bt_build_tests (bt_build_id, bt_file_id, bt_file_name,\n" +
       "bt_test_id, bt_test_name, bt_test_version_id, bt_test_version_name,\n" +
@@ -49,11 +44,13 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
       return;
     }
     
-    Tuple<String, SqlParamsBuilder> queryAndParams = getTestQueryFromStmAndParams(incomingFiles,
+    Tuple<String, SqlParamsBuilder> queryAndParams = getTestQuerySelectStmOrderedAndParams(
+        incomingFiles,
         projectId);
-    String fromStm = queryAndParams.x();
+    String selectStmOrdered = queryAndParams.x();
     SqlParamsBuilder paramsBuilder = queryAndParams.y();
-    int totalTests = jdbc.query("SELECT count(*)\n" + fromStm, paramsBuilder.build(),
+    int totalTests = jdbc.query("SELECT count(*) FROM (\n" + selectStmOrdered + "\n) t",
+        paramsBuilder.build(),
         CommonUtil.getSingleInt()).get(0);
     if (totalBuilds > totalTests) {
       throw new IllegalArgumentException(insufficientTestsExMsg);
@@ -63,9 +60,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     StringBuilder compositeSelect = new StringBuilder();
     for (int i = 0; i < totalBuilds; i++) {
       boolean notLast = i < totalBuilds - 1;
-      String sql = TEST_Q_SELECT.replace(":bt_build_id", ":bt_build_id" + (i + 1)) +
-          fromStm +
-          "ORDER BY f.name, t.name\n" + // ordering is important when using OFFSET
+      String sql = selectStmOrdered.replace(":bt_build_id", ":bt_build_id" + (i + 1)) +
           (notLast ? "LIMIT " + blockSize : "") + "\n" + // Allocate remaining tests for last build
           "OFFSET " + (i * blockSize) + "\n";
       paramsBuilder.withInteger("bt_build_id" + (i + 1), buildIds.get(i));
@@ -80,23 +75,27 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     jdbc.update(TEST_Q_INSERT + compositeSelect, paramsBuilder.build());
   }
   
-  private Tuple<String, SqlParamsBuilder> getTestQueryFromStmAndParams(
+  private Tuple<String, SqlParamsBuilder> getTestQuerySelectStmOrderedAndParams(
       @Nullable List<IncomingFile> incomingFiles,
       int projectId) {
-    return getTestQueryFromStmAndParams(incomingFiles, projectId, 0);
+    return getTestQuerySelectStmOrderedAndParams(incomingFiles, projectId, 0);
   }
   
-  private Tuple<String, SqlParamsBuilder> getTestQueryFromStmAndParams(
+  private Tuple<String, SqlParamsBuilder> getTestQuerySelectStmOrderedAndParams(
       @Nullable List<IncomingFile> incomingFiles,
       int projectId,
       int buildId) {
-    String baseSql = "FROM bt_file f\n" +
+    String baseSql = "SELECT :bt_build_id, f.bt_file_id, f.name, t.bt_test_id, t.name,\n" +
+        "v.bt_test_version_id, v.name, v.code,\n" +
+        "(SELECT count(*) + 1 FROM (SELECT regexp_matches(v.code, '\\n', 'g')) t) code_lines\n" +
+        "FROM bt_file f\n" +
         "JOIN bt_test t USING (bt_file_id)\n" +
         "JOIN bt_test_version v USING (bt_test_id)\n" +
         "WHERE bt_project_id = :bt_project_id\n" +
         "AND code IS NOT NULL\n" +
         "AND t.name !~ '^[a-z0-9_-]+$'\n" + // Match only non identifiers test names. TODO: Remove this once we've functions
         "AND length(regexp_replace(coalesce(code, ''), '[\\n\\r\\t\\s]', '', 'g')) > 0\n";
+    String orderByStm = "ORDER BY f.name, t.name\n";
   
     SqlParamsBuilder paramsBuilder = new SqlParamsBuilder();
     paramsBuilder.withInteger("bt_build_id", buildId);
@@ -113,6 +112,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
       while (withoutVersion.hasNext()) {
         ++paramUniqueCounter;
         IncomingFile incomingFile = withoutVersion.next();
+        filesSelector.append("(");
         filesSelector.append(baseSql);
         filesSelector.append(String.format("AND f.name = :file_name%s\n", paramUniqueCounter));
         paramsBuilder.withVarchar("file_name" + paramUniqueCounter, incomingFile.getName());
@@ -128,6 +128,8 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
         }
       
         filesSelector.append("AND is_current = true\n");
+        filesSelector.append(orderByStm);
+        filesSelector.append(")");
       
         if (withoutVersion.hasNext()) {
           filesSelector.append("UNION ALL\n");
@@ -149,6 +151,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
         //noinspection ConstantConditions
         for (IncomingTest incomingTest : incomingFile.getTests().stream()
             .filter(t -> t.getVersions() != null).collect(Collectors.toList())) {
+          filesSelector.append("(");
           filesSelector.append(baseSql);
           filesSelector.append(String.format("AND f.name = :file_name%s\n", paramUniqueCounter));
           paramsBuilder.withVarchar("file_name" + paramUniqueCounter, incomingFile.getName());
@@ -161,6 +164,8 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
           //noinspection ConstantConditions
           paramsBuilder.withArray("version_names" + paramUniqueCounter,
               incomingTest.getVersions().toArray(), JDBCType.VARCHAR);
+          filesSelector.append(orderByStm);
+          filesSelector.append(")");
         
           if (withVersion.hasNext()) {
             filesSelector.append("UNION ALL\n");
@@ -170,16 +175,17 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
     } else {
       filesSelector.append(baseSql);
       filesSelector.append("AND is_current = true\n");
+      filesSelector.append(orderByStm);
     }
     return Tuple.of(filesSelector.toString(), paramsBuilder);
   }
   
   @Override
   public void captureTests(@Nullable List<IncomingFile> incomingFiles, int projectId, int buildId) {
-    Tuple<String, SqlParamsBuilder> queryAndParams = getTestQueryFromStmAndParams(incomingFiles,
+    Tuple<String, SqlParamsBuilder> queryAndParams = getTestQuerySelectStmOrderedAndParams(incomingFiles,
         projectId, buildId);
     
-    int result = jdbc.update(TEST_Q_INSERT + TEST_Q_SELECT + queryAndParams.x(),
+    int result = jdbc.update(TEST_Q_INSERT + queryAndParams.x(),
         queryAndParams.y().build());
     if (result < 1) {
       throw new RuntimeException("No tests found for running. " +

@@ -88,3 +88,9 @@ Enhancements
 ### Bug fixes
 
 1. Fixed build ordering bug in build parts.
+
+## v0.1.4
+
+### Bug fixes
+
+1. Fixed a bug in file selector query introduced while building parallel functionality.
