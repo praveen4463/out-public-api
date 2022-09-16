@@ -37,6 +37,12 @@ public class BuildRunConfig {
     private boolean notifyOnCompletion;
   
     private Map<String, String> buildVars;
+    
+    private boolean deleteAllCookiesAfterEachTest;
+  
+    private boolean updateUrlBlankAfterEachTest;
+  
+    private boolean resetTimeoutsAfterEachTest;
   
     public int getTotalParallel() {
       return totalParallel;
@@ -109,6 +115,33 @@ public class BuildRunConfig {
       this.buildVars = buildVars;
       return this;
     }
+  
+    public boolean isDeleteAllCookiesAfterEachTest() {
+      return deleteAllCookiesAfterEachTest;
+    }
+  
+    public BuildConfig setDeleteAllCookiesAfterEachTest(boolean deleteAllCookiesAfterEachTest) {
+      this.deleteAllCookiesAfterEachTest = deleteAllCookiesAfterEachTest;
+      return this;
+    }
+  
+    public boolean isUpdateUrlBlankAfterEachTest() {
+      return updateUrlBlankAfterEachTest;
+    }
+  
+    public BuildConfig setUpdateUrlBlankAfterEachTest(boolean updateUrlBlankAfterEachTest) {
+      this.updateUrlBlankAfterEachTest = updateUrlBlankAfterEachTest;
+      return this;
+    }
+  
+    public boolean isResetTimeoutsAfterEachTest() {
+      return resetTimeoutsAfterEachTest;
+    }
+  
+    public BuildConfig setResetTimeoutsAfterEachTest(boolean resetTimeoutsAfterEachTest) {
+      this.resetTimeoutsAfterEachTest = resetTimeoutsAfterEachTest;
+      return this;
+    }
   }
   
   public static class BuildCapability {
@@ -118,6 +151,10 @@ public class BuildRunConfig {
     private String browser;
     
     private String browserVersion;
+    
+    private String meDeviceType;
+  
+    private String meDeviceDimensions;
   
     public String getOs() {
       return os;
@@ -143,6 +180,24 @@ public class BuildRunConfig {
   
     public BuildCapability setBrowserVersion(String browserVersion) {
       this.browserVersion = browserVersion;
+      return this;
+    }
+  
+    public String getMeDeviceType() {
+      return meDeviceType;
+    }
+  
+    public BuildCapability setMeDeviceType(String meDeviceType) {
+      this.meDeviceType = meDeviceType;
+      return this;
+    }
+  
+    public String getMeDeviceDimensions() {
+      return meDeviceDimensions;
+    }
+  
+    public BuildCapability setMeDeviceDimensions(String meDeviceDimensions) {
+      this.meDeviceDimensions = meDeviceDimensions;
       return this;
     }
   }

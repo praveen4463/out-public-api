@@ -10,7 +10,7 @@ info:
   title: Outomated api
   # This version no. is just to showing in the console and has no affect on functionality, although it should be
   # updated whenever production version is updated.
-  version: 0.1.4
+  version: 0.1.5
 host: api.outomated.com
 x-google-endpoints:
   - name: api.outomated.com

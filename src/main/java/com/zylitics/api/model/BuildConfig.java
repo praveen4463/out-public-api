@@ -20,6 +20,12 @@ public class BuildConfig {
   
   private Map<String, String> buildVars;
   
+  private boolean deleteAllCookiesAfterEachTest;
+  
+  private boolean updateUrlBlankAfterEachTest;
+  
+  private boolean resetTimeoutsAfterEachTest;
+  
   public int getTotalParallel() {
     return totalParallel;
   }
@@ -89,6 +95,33 @@ public class BuildConfig {
   
   public BuildConfig setBuildVars(Map<String, String> buildVars) {
     this.buildVars = buildVars;
+    return this;
+  }
+  
+  public boolean isDeleteAllCookiesAfterEachTest() {
+    return deleteAllCookiesAfterEachTest;
+  }
+  
+  public BuildConfig setDeleteAllCookiesAfterEachTest(boolean deleteAllCookiesAfterEachTest) {
+    this.deleteAllCookiesAfterEachTest = deleteAllCookiesAfterEachTest;
+    return this;
+  }
+  
+  public boolean isUpdateUrlBlankAfterEachTest() {
+    return updateUrlBlankAfterEachTest;
+  }
+  
+  public BuildConfig setUpdateUrlBlankAfterEachTest(boolean updateUrlBlankAfterEachTest) {
+    this.updateUrlBlankAfterEachTest = updateUrlBlankAfterEachTest;
+    return this;
+  }
+  
+  public boolean isResetTimeoutsAfterEachTest() {
+    return resetTimeoutsAfterEachTest;
+  }
+  
+  public BuildConfig setResetTimeoutsAfterEachTest(boolean resetTimeoutsAfterEachTest) {
+    this.resetTimeoutsAfterEachTest = resetTimeoutsAfterEachTest;
     return this;
   }
 }

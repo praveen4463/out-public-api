@@ -94,3 +94,9 @@ Enhancements
 ### Bug fixes
 
 1. Fixed a bug in file selector query introduced while building parallel functionality.
+
+## v0.1.5
+
+### Enhancements
+
+1. Added ability to perform mobile emulation and provided more config options for runner options.

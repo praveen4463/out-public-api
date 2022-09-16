@@ -10,6 +10,8 @@ public class BuildCapability {
   
   private String platform;
   
+  private String meDeviceDimensions;
+  
   public String getOs() {
     return os;
   }
@@ -43,6 +45,15 @@ public class BuildCapability {
   
   public BuildCapability setPlatform(String platform) {
     this.platform = platform;
+    return this;
+  }
+  
+  public String getMeDeviceDimensions() {
+    return meDeviceDimensions;
+  }
+  
+  public BuildCapability setMeDeviceDimensions(String meDeviceDimensions) {
+    this.meDeviceDimensions = meDeviceDimensions;
     return this;
   }
 }

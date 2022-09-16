@@ -93,7 +93,7 @@ public class DaoTestProvider extends AbstractDaoProvider implements TestProvider
         "JOIN bt_test_version v USING (bt_test_id)\n" +
         "WHERE bt_project_id = :bt_project_id\n" +
         "AND code IS NOT NULL\n" +
-        "AND t.name !~ '^[a-z0-9_-]+$'\n" + // Match only non identifiers test names. TODO: Remove this once we've functions
+        "AND t.name !~ '^[a-z0-9_]+$'\n" + // Match only non identifiers test names. TODO: Remove this once we've functions
         "AND length(regexp_replace(coalesce(code, ''), '[\\n\\r\\t\\s]', '', 'g')) > 0\n";
     String orderByStm = "ORDER BY f.name, t.name\n";
   

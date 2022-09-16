@@ -7,14 +7,14 @@
   <artifactId>zl-api</artifactId>
   <!-- Note: !!! This version is used in these places, kubernetes deployment files, image names in deployment files,
         openapi specification. Once updated, change all those places too. !!! -->
-  <version>0.1.4</version>
+  <version>0.1.5</version>
   <name>zl-api</name>
   <url>http://maven.apache.org</url>
   <properties>
-    <google-cloud-kms.version>1.41.1</google-cloud-kms.version>
-    <google-cloud-storage.version>1.113.14</google-cloud-storage.version>
-    <jib-maven-plugin.version>3.2.1</jib-maven-plugin.version>
-    <stackdriver-logback.version>0.120.4-alpha</stackdriver-logback.version>
+    <google-cloud-kms.version>2.4.4</google-cloud-kms.version>
+    <google-cloud-storage.version>2.6.1</google-cloud-storage.version>
+    <jib-maven-plugin.version>3.3.0</jib-maven-plugin.version>
+    <stackdriver-logback.version>0.123.11-alpha</stackdriver-logback.version>
     <sendgrid.version>4.7.1</sendgrid.version>
 
     <projectId>zl-infra-main</projectId>

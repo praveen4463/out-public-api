@@ -1,5 +1,6 @@
 package com.zylitics.api.controllers;
 
+import com.google.common.base.Splitter;
 import com.zylitics.api.config.APICoreProperties;
 import com.zylitics.api.config.BrowserConfig;
 import com.zylitics.api.config.OSConfig;
@@ -38,6 +39,10 @@ public class BuildController extends AbstractController {
   private static final Logger LOG = LoggerFactory.getLogger(BuildController.class);
   
   private static final Pattern DIS_RES_PATTERN = Pattern.compile("\\d{3,4}x\\d{3,4}");
+  
+  private static final String DEF_MOBILE_DIMS = "390x844"; // iPhone 13
+  
+  private static final String DEF_TABLET_DIMS = "820x1180"; // iPad air
   
   private final APICoreProperties apiCoreProperties;
   
@@ -372,6 +377,7 @@ public class BuildController extends AbstractController {
     String browser;
     String browserVersion;
     String platform;
+    String meDeviceDimensions = null;
   
     BuildRunConfig.BuildCapability configBCaps = config.getBuildCapability();
     if (configBCaps == null) {
@@ -392,11 +398,32 @@ public class BuildController extends AbstractController {
         throw new IllegalArgumentException("Given browser version doesn't exist");
       }
     }
+    
+    if (configBCaps.getMeDeviceDimensions() != null) {
+      String deviceDims = configBCaps.getMeDeviceDimensions();
+      List<String> dims =
+          Splitter.on('x').omitEmptyStrings().splitToList(deviceDims);
+      if (dims.size() != 2) {
+        throw new IllegalArgumentException("Unexpected device dimensions " + deviceDims);
+      }
+      meDeviceDimensions = deviceDims;
+    } else if (configBCaps.getMeDeviceType() != null) {
+      String deviceType = configBCaps.getMeDeviceType().toLowerCase(Locale.ROOT);
+      if (deviceType.equals("mobile")) {
+        meDeviceDimensions = DEF_MOBILE_DIMS;
+      } else if (deviceType.equals("tablet")) {
+        meDeviceDimensions = DEF_TABLET_DIMS;
+      } else {
+        throw new IllegalArgumentException("Unrecognized mobile device " + deviceType);
+      }
+    }
+    
     return new BuildCapability()
         .setOs(os)
         .setPlatform(platform)
         .setBrowser(browser)
-        .setBrowserVersion(browserVersion);
+        .setBrowserVersion(browserVersion)
+        .setMeDeviceDimensions(meDeviceDimensions);
   }
   
   BuildConfig deduceBuildConfig(BuildRunConfig config, APIDefaults apiDefaults) {
@@ -432,7 +459,10 @@ public class BuildController extends AbstractController {
         .setCaptureDriverLogs(configBConf.isCaptureDriverLogs())
         .setRetryFailedTestsUpto(retryUpto)
         .setNotifyOnCompletion(configBConf.getNotifyOnCompletion())
-        .setBuildVars(configBConf.getBuildVars());
+        .setBuildVars(configBConf.getBuildVars())
+        .setDeleteAllCookiesAfterEachTest(configBConf.isDeleteAllCookiesAfterEachTest())
+        .setUpdateUrlBlankAfterEachTest(configBConf.isUpdateUrlBlankAfterEachTest())
+        .setResetTimeoutsAfterEachTest(configBConf.isResetTimeoutsAfterEachTest());
   }
   
   private long getNewBuildRequest(BuildSourceType sourceType, int userId) {
