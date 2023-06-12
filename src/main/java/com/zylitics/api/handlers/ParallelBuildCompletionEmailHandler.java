@@ -129,6 +129,7 @@ public class ParallelBuildCompletionEmailHandler {
             String.format("<p class=\"test-name\">%s > %s</p>" +
                     "<p class=\"error-detail\">Failed at: %s</p>" +
                     "<p class=\"error-detail\">Build part: %s</p>" +
+                    "<p class=\"error-detail\">URL: %s</p>" +
                     "<pre><div class=\"error\">%s</div></pre>",
                 testDetail.getFile(),
                 testDetail.getTest(),
@@ -136,6 +137,9 @@ public class ParallelBuildCompletionEmailHandler {
                 getLinkToBuild(builds.stream()
                     .filter(b -> b.getBuildId() == testDetail.getBuildId())
                     .findFirst().orElseThrow(RuntimeException::new)),
+                String.format("<a href=\"%s\" target=\"_blank\">%s</a>",
+                    testDetail.getUrlUponError(),
+                    testDetail.getUrlUponError()),
                 testDetail.getError())
         );
         totalFailed++;

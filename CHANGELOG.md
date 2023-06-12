@@ -100,3 +100,9 @@ Enhancements
 ### Enhancements
 
 1. Added ability to perform mobile emulation and provided more config options for runner options.
+
+## v0.1.6
+
+### Enhancements
+
+1. Added a link to url upon failure in parallel builds.

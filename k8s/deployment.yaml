@@ -8,7 +8,7 @@ metadata:
   name: zl-api-deployment
   labels: &LABELS # will be assigned to deployment object
     app.kubernetes.io/name: &APP zl-api
-    app.kubernetes.io/version: &VERSION 0.1.5
+    app.kubernetes.io/version: &VERSION 0.1.6
     environment: &ENVIRONMENT production
 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#deploymentspec-v1-apps
 spec:
@@ -42,7 +42,7 @@ spec:
           ports:
             - containerPort: 4000
         - name: *APP
-          image: us.gcr.io/zl-infra-main/zl-api:0.1.5
+          image: us.gcr.io/zl-infra-main/zl-api:0.1.6
           imagePullPolicy: IfNotPresent
           ports:
             - name: &CONTAINER_PORT container-port
@@ -112,7 +112,7 @@ metadata:
     # !! don't use in production, allows http access.
     # nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
-  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1beta1-extensions
+  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.21/#ingresstls-v1-networking-k8s-io
   tls:
     - secretName: zl-k8s-out-cert
   rules:
